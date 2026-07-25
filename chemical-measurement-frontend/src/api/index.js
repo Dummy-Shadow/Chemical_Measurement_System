@@ -25,3 +25,14 @@ export const mediaApi = {
   update: (id, data) => request.put(`/media/${id}`, data),
   delete: (id) => request.delete(`/media/${id}`)
 }
+
+export const dashboardApi = {
+  stats: () => request.get('/dashboard/stats'),
+  trend: () => request.get('/dashboard/trend')
+}
+
+export const knowledgeApi = {
+  list: (params) => request.get('/knowledge', { params }),
+  detail: (id) => request.get(`/knowledge/${id}`),
+  recommend: (params) => request.get('/knowledge/recommend', { params })
+}

@@ -217,6 +217,37 @@ INSERT INTO indicator_template (category_id, indicator_name, indicator_unit, sor
 (4, '电导率', 'μs/cm', 1),
 (4, '氯离子', 'ppm', 2);
 
+-- 知识库表
+DROP TABLE IF EXISTS knowledge_base;
+CREATE TABLE knowledge_base (
+    kb_id        BIGINT       NOT NULL AUTO_INCREMENT COMMENT '知识条目ID',
+    title        VARCHAR(200) NOT NULL COMMENT '问题标题',
+    category     VARCHAR(50)  DEFAULT NULL COMMENT '分类: 浓度异常/pH异常/细菌超标/电导率异常/氯离子超标',
+    media_id     BIGINT       DEFAULT NULL COMMENT '关联介质ID',
+    indicator_id BIGINT       DEFAULT NULL COMMENT '关联指标ID',
+    symptom      TEXT         COMMENT '异常现象描述',
+    cause        TEXT         COMMENT '可能原因',
+    solution     TEXT         NOT NULL COMMENT '处理措施/解决方案',
+    priority     TINYINT      DEFAULT 1 COMMENT '优先级: 1-低 2-中 3-高',
+    usage_count  INT          DEFAULT 0 COMMENT '引用次数',
+    create_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (kb_id),
+    KEY idx_category (category),
+    KEY idx_media_id (media_id),
+    KEY idx_usage (usage_count)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='知识库表';
+
 -- 管理员账号（密码: admin123）
 INSERT INTO user (username, password, real_name, role) VALUES
 ('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '系统管理员', 'ADMIN');
+
+INSERT INTO knowledge_base (title, category, symptom, cause, solution, priority) VALUES
+('乳化液浓度偏低', '浓度异常', '折光浓度低于标准下限，可能导致润滑不足、工件锈蚀', '补水过多、原液补加不足、泄漏', '1.检测系统漏水点并修复；2.按比例补加原液；3.复测至合格', 3),
+('乳化液浓度偏高', '浓度异常', '折光浓度高于标准上限，可能导致泡沫多、工件残留', '补水不足、原液补加过量', '1.定量补水稀释；2.充分搅拌后复测；3.调整补液比例', 2),
+('pH值偏低（酸性偏移）', 'pH异常', 'pH值持续下降，可能导致设备腐蚀、细菌滋生', '细菌繁殖产酸、外来酸性污染、原液变质', '1.检测细菌含量；2.添加pH调节剂；3.严重时更换新液', 3),
+('pH值偏高（碱性偏移）', 'pH异常', 'pH值持续上升，可能影响防锈性能', '碱性清洗剂混入、补水水质问题', '1.检查清洗液管路是否泄漏；2.检测补水水质；3.部分更换液体', 2),
+('细菌含量超标', '细菌超标', '液体发臭、颜色变深、pH下降', '长期未杀菌、温度适宜细菌繁殖、外来污染', '1.添加杀菌剂；2.加强循环过滤；3.严重时排空消毒后更换新液', 3),
+('真菌含量超标', '细菌超标', '液面出现霉斑、管路堵塞', '环境潮湿、长期停机未处理', '1.添加真菌抑制剂；2.清理过滤系统；3.加强日常维护频率', 2),
+('清洗液浓度偏低', '浓度异常', '清洗效果差、工件表面残留油污', '清洗液补加不足、水分蒸发后补水过多', '1.按比例补加清洗液原液；2.调整自动补液系统参数；3.复测确认', 2),
+('电导率异常偏高', '电导率异常', '电导率超出标准上限，影响冷却效能', '离子积累、外来盐类污染、补水硬度过高', '1.检测补水水质；2.部分更换液体；3.必要时进行去离子处理', 2);

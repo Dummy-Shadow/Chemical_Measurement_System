@@ -28,9 +28,10 @@ public class AuthServiceImpl implements AuthService {
         if (user == null || !passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
             return Result.unauthorized("用户名或密码错误");
         }
-        String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
+        String token = jwtUtil.generateToken(user.getUserId(), user.getUsername(), user.getRole(), user.getManagedLines());
         LoginVO vo = new LoginVO();
         vo.setToken(token);
+        vo.setUserId(user.getUserId());
         vo.setUsername(user.getUsername());
         vo.setRealName(user.getRealName());
         vo.setRole(user.getRole());

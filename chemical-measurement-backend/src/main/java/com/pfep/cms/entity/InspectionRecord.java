@@ -17,6 +17,8 @@ public class InspectionRecord {
     private Long inspectorId;
     private Double ocrConfidence;
     private Integer status;
+    private String entryType;
+    private Long entryUserId;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     @TableField(fill = FieldFill.INSERT_UPDATE)
