@@ -399,3 +399,7 @@ npm run dev
 | 仪表盘未区分复测正常 | 按(工位,介质)分组，最早异常+最新正常=复测正常 |
 | `hasRole("ADMIN")` 残留导致系统管理页403 | 改为 `hasAnyRole("DEVELOPER","AREA_MANAGER")` |
 | axios `baseURL` + `/api/retest` 双层前缀 → 404 | 去掉多余 `/api/` 前缀 |
+
+---
+
+Copyright (c) 2026 ֣����. Released under MIT License.

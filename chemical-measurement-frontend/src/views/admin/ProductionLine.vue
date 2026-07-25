@@ -1,3 +1,4 @@
+<!-- Copyright (c) 2026 郑杭宇. All rights reserved. Licensed under MIT. -->
 <template>
   <div class="admin-page">
     <el-card>

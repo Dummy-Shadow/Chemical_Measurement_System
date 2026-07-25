@@ -1,3 +1,6 @@
+// Copyright (c) 2026 郑杭宇. All rights reserved.
+// Licensed under the MIT License. See LICENSE file.
+
 import axios from 'axios'
 import { useUserStore } from '@/store/user'
 import { ElMessage } from 'element-plus'

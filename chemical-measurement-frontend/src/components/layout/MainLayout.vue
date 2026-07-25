@@ -1,3 +1,4 @@
+<!-- Copyright (c) 2026 郑杭宇. All rights reserved. Licensed under MIT. -->
 <template>
   <el-container class="main-container">
     <el-aside width="220px" class="sidebar">
