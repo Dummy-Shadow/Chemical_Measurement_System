@@ -424,7 +424,9 @@ npm run dev
 双击项目根目录的 start.bat
 ```
 
-自动完成：检测环境 → 启动MySQL → 首次建库 → 启动后端(8090) → 启动前端(3000) → 打开浏览器
+弹出三个窗口：主控窗口（显示进度）→ 后端窗口(8090) → 前端窗口(3000)。
+
+等后端窗口出现 `Started ChemicalMeasurementApplication` 后，浏览器访问 `http://localhost:3000`。
 
 ### 默认账号
 
@@ -435,11 +437,10 @@ npm run dev
 | 审核者A | inspector_a | 123456 |
 | 审核者B | inspector_b | 123456 |
 
-### 安全配置
+### 安全措施
 
-- 数据库密码、JWT密钥使用 Jasypt (PBEWithMD5AndDES) 加密存储
-- 主密码通过环境变量 `JASYPT_ENCRYPTOR_PASSWORD` 读取
-- 前端生产构建 (`npm run build`) 自动对 JS 混淆压缩
-- 源码含 MIT License 版权声明
+- Jasypt 依赖已集成，配置文件已预留 `ENC()` 密文格式（当前明文，部署时用 `jasypt-maven-plugin` 加密）
+- 前端生产构建 (`npm run build`) 自动通过 `rollup-plugin-obfuscator` 混淆压缩 JS
+- 源码含 MIT License 版权声明，所有源文件含 Copyright 头部
 
 Copyright (c) 2026 Ö£º¼Óî. Released under MIT License.
