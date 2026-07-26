@@ -32,7 +32,7 @@ knife4j:
     language: zh_cn
 
 jwt:
-  secret: pfep-cms-jwt-secret-key-2026-chemical-measurement-system
+  secret: ${JWT_SECRET:please-set-JWT_SECRET-env-var-in-production-32bytes}
   expiration: 86400000
 
 ocr:

@@ -43,6 +43,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public Result<?> register(RegisterDTO registerDTO) {
+        if (registerDTO.getPassword() == null || registerDTO.getPassword().length() < 8) {
+            return Result.error("密码至少8位");
+        }
         Long count = userMapper.selectCount(new LambdaQueryWrapper<User>()
                 .eq(User::getUsername, registerDTO.getUsername()));
         if (count > 0) {

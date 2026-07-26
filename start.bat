@@ -100,7 +100,8 @@ if errorlevel 1 (
 :: --- Step 6: Start Backend ---
 echo [6] Starting backend (port %PORT_BACK%)...
 set "JASYPT_ENCRYPTOR_PASSWORD=%JASYPT_KEY%"
-set "BACKEND_DIR=%~dp0chemical-measurement-backend"
+if not defined JWT_SECRET set "JWT_SECRET=start-bat-fallback-key-do-not-use-in-production"
+if not defined DB_PASSWORD set "DB_PASSWORD=admin123"
 start "Backend-%PORT_BACK%" cmd /k "%~dp0backend.bat"
 cd /d "%~dp0"
 
