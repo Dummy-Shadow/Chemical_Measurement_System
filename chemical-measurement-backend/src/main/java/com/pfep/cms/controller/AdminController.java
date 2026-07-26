@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -61,6 +62,7 @@ public class AdminController {
     }
 
     @DeleteMapping("/production-lines/{id}")
+    @Transactional
     public Result<?> deleteLine(@PathVariable Long id, HttpServletRequest req) {
         if (!isDev(req)) return authErr();
         // 级联删除工位
@@ -110,6 +112,7 @@ public class AdminController {
     }
 
     @DeleteMapping("/workstations/{id}")
+    @Transactional
     public Result<?> deleteWorkstation(@PathVariable Long id, HttpServletRequest req) {
         if (!isDev(req)) return authErr();
         int cnt = deleteWorkstationCascade(id);
@@ -226,6 +229,7 @@ public class AdminController {
     }
 
     @PostMapping("/workstation-media")
+    @Transactional
     public Result<?> createWm(@RequestBody Map<String, Object> body, HttpServletRequest req) {
         if (!isManagerOrDev(req)) return authErr();
         Long stationId = toLong(body.get("stationId"));
@@ -343,9 +347,8 @@ public class AdminController {
         boolean isDev = isDev(req);
         boolean isSelf = getUserId(req).equals(id);
 
-        // 审核者只能改自己名字和密码
+        // 非开发者且非本人不能修改
         if (!isDev && !isSelf) return authErr();
-        if (!isDev && !isSelf && isSelf) { /* fall through to allowed fields */ }
 
         // 开发者可以改任何字段
         if (isDev) {
@@ -377,6 +380,7 @@ public class AdminController {
     }
 
     @DeleteMapping("/users/{id}")
+    @Transactional
     public Result<?> deleteUser(@PathVariable Long id, HttpServletRequest req) {
         if (!isDev(req)) return authErr();
         User u = userMapper.selectById(id);
@@ -449,9 +453,13 @@ public class AdminController {
     }
 
     private Long getUserId(HttpServletRequest req) {
+        Object attr = req.getAttribute("userId");
+        if (attr instanceof Long) return (Long) attr;
         try {
-            return (Long) req.getAttribute("userId");
-        } catch (Exception e) { return 2L; }
+            return (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        } catch (Exception e) {
+            throw new RuntimeException("无法获取当前用户ID，请重新登录", e);
+        }
     }
 
     private java.math.BigDecimal toBigDecimal(Object v) {

@@ -18,6 +18,12 @@ public class JwtUtil {
     @Value("${jwt.secret}")
     private String secret;
 
+    @Value("${jwt.secret}")
+    public void setSecret(String configSecret) {
+        String envSecret = System.getenv("JWT_SECRET");
+        this.secret = (envSecret != null && !envSecret.isEmpty()) ? envSecret : configSecret;
+    }
+
     @Value("${jwt.expiration}")
     private long expiration;
 

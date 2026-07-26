@@ -25,11 +25,20 @@ public class OcrController {
     @PostMapping("/recognize")
     public Result<Map<String, Object>> recognize(@RequestParam("file") MultipartFile file) {
         try {
-            // 保存文件
-            File dir = new File(UPLOAD_DIR);
+            // 安全校验
+            String original = file.getOriginalFilename();
+            if (original == null || !original.matches("(?i).*\\.(jpg|jpeg|png|bmp)$")) {
+                return Result.error("仅支持 jpg/png/bmp 图片格式");
+            }
+            if (file.getSize() > 5 * 1024 * 1024) {
+                return Result.error("文件大小不能超过5MB");
+            }
+
+            // 保存到绝对路径
+            File dir = new File(System.getProperty("user.dir"), UPLOAD_DIR);
             if (!dir.exists()) dir.mkdirs();
-            String filename = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-            File dest = new File(UPLOAD_DIR + filename);
+            String filename = System.currentTimeMillis() + "_" + sanitizeFilename(original);
+            File dest = new File(dir, filename);
             file.transferTo(dest);
 
             // TODO: 对接真实OCR API（百度OCR/阿里云OCR/PaddleOCR）
@@ -68,6 +77,10 @@ public class OcrController {
         } catch (Exception e) {
             return Result.error("识别失败: " + e.getMessage());
         }
+    }
+
+    private String sanitizeFilename(String filename) {
+        return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
 
     // ====== 以下为对接真实OCR API的预留模板 ======

@@ -15,7 +15,7 @@ CREATE TABLE user (
     username    VARCHAR(50)  NOT NULL COMMENT '用户名',
     password    VARCHAR(255) NOT NULL COMMENT '密码(BCrypt)',
     real_name   VARCHAR(50)  DEFAULT NULL COMMENT '真实姓名',
-    role        VARCHAR(20)  NOT NULL DEFAULT 'INSPECTOR' COMMENT '角色: ADMIN/INSPECTOR',
+    role        VARCHAR(20)  NOT NULL DEFAULT 'INSPECTOR' COMMENT '角色: DEVELOPER/AREA_MANAGER/INSPECTOR',
     create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     deleted     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除: 0-未删 1-已删',
@@ -238,9 +238,12 @@ CREATE TABLE knowledge_base (
     KEY idx_usage (usage_count)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='知识库表';
 
--- 管理员账号（密码: admin123）
-INSERT INTO user (username, password, real_name, role) VALUES
-('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '系统管理员', 'ADMIN');
+-- 默认账号（密码: 123456）
+INSERT INTO user (username, password, real_name, role, managed_lines) VALUES
+('dev_admin', '$2b$10$Qd1IDp76/UKTo.fIQKM1qOIP45SXMzvudRfN3YfdMhF/.6liyYitG', '开发者', 'DEVELOPER', NULL),
+('area_mgr', '$2b$10$MxyNapr.dAqBvgT.r0ZTd.FpI7luEW.SIYJ8Cdtr10d8hHtXg/Z.u', '张管理', 'AREA_MANAGER', NULL),
+('inspector_a', '$2b$10$dGu0igwnLP0le1624cKxYuCxEKmngixjOAp4h19fLdfGMJ1D.BvHG', '李审核', 'INSPECTOR', '1,2'),
+('inspector_b', '$2b$10$dbUXmRNJmEK5Du.K4wcFIeyxHWaeazUaZCCyuH1ZvJv5Kb/GvOVMa', '王审核', 'INSPECTOR', '3,4,5');
 
 INSERT INTO knowledge_base (title, category, symptom, cause, solution, priority) VALUES
 ('乳化液浓度偏低', '浓度异常', '折光浓度低于标准下限，可能导致润滑不足、工件锈蚀', '补水过多、原液补加不足、泄漏', '1.检测系统漏水点并修复；2.按比例补加原液；3.复测至合格', 3),
