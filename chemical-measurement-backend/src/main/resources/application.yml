@@ -33,7 +33,7 @@ knife4j:
     language: zh_cn
 
 jwt:
-  secret: pfep-cms-jwt-secret-key-2026-chemical-measurement-system
+  secret: ENC(/f/7PfrPxyXldG9r5gkewMLcsPVk17J93xtHGCkWW/F6QEDwOrQIEFVlSP3wAwBYhUwOxSZ0De9DxnBozJvPlg==)
   expiration: 86400000
 
 ocr:

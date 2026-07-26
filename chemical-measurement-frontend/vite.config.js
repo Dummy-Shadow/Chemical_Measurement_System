@@ -4,9 +4,20 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
+import obfuscator from 'rollup-plugin-obfuscator'
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    ...(process.env.NODE_ENV === 'production' ? [obfuscator({
+      compact: true,
+      controlFlowFlattening: false,
+      deadCodeInjection: false,
+      simplify: true,
+      stringArrayEncoding: ['base64'],
+      stringArrayThreshold: 0.5
+    })] : [])
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src')
