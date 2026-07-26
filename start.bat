@@ -100,8 +100,8 @@ if errorlevel 1 (
 :: --- Step 6: Start Backend ---
 echo [6] Starting backend (port %PORT_BACK%)...
 set JASYPT_ENCRYPTOR_PASSWORD=%JASYPT_KEY%
-cd /d "%~dp0chemical-measurement-backend"
-start "Backend-%PORT_BACK%" cmd /c "title PFEP Backend && mvn spring-boot:run 2>&1 && pause"
+set "BACKEND_DIR=%~dp0chemical-measurement-backend"
+start "Backend-%PORT_BACK%" cmd /c "title PFEP Backend && set JAVA_HOME=%JAVA_HOME% && set PATH=%JAVA_HOME:\=\\%\\bin;%PATH% && cd /d %BACKEND_DIR% && %MVN% spring-boot:run && pause"
 cd /d "%~dp0"
 
 :: --- Step 7: Start Frontend ---
