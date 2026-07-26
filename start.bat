@@ -1,6 +1,5 @@
 @echo off & setlocal enabledelayedexpansion
 title PFEP车间冷却介质检测数据管理系统
-chcp 65001 >nul
 color 0A
 
 echo ============================================
@@ -153,7 +152,11 @@ echo     管理者   area_mgr  / 123456
 echo     审核者A  inspector_a / 123456
 echo     审核者B  inspector_b / 123456
 echo.
-echo   按任意键打开浏览器，或关闭本窗口...
-pause >nul
-start http://localhost:%FRONTEND_PORT%
+echo   正在打开浏览器...
+start "" "http://localhost:%FRONTEND_PORT%" 2>nul || explorer "http://localhost:%FRONTEND_PORT%"
+echo.
+echo   如浏览器未自动打开，请手动访问 http://localhost:%FRONTEND_PORT%
+echo.
+echo   关闭此窗口将停止所有服务。
+pause
 exit /b 0
