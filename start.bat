@@ -1,5 +1,4 @@
 @echo off
-setlocal enabledelayedexpansion
 title PFEP Coolant Detection System
 
 :: ============ CONFIG ============
@@ -22,14 +21,14 @@ echo.
 :: --- Step 1: Find Java ---
 echo [1] Looking for Java...
 set JAVA=
-for /f "tokens=*" %%i in ('where java.exe 2^>nul') do if "!JAVA!"=="" set "JAVA=%%i"
+for /f "tokens=*" %%i in ('where java.exe 2^>nul') do if "%JAVA%"=="" set "JAVA=%%i"
 if "%JAVA%"=="" (
     for /d %%d in (
         "C:\Program Files\Java\*"
         "C:\Program Files\Eclipse Adoptium\*"
         "C:\Program Files\JetBrains\*"
     ) do (
-        if exist "%%d\bin\java.exe" if "!JAVA!"=="" set "JAVA=%%d\bin\java.exe"
+        if exist "%%d\bin\java.exe" if "%JAVA%"=="" set "JAVA=%%d\bin\java.exe"
     )
 )
 if "%JAVA%"=="" (
@@ -37,19 +36,19 @@ if "%JAVA%"=="" (
     pause & exit /b 1
 )
 for %%j in ("%JAVA%") do set "JAVA_HOME=%%~dpj.."
-echo    Found: %JAVA%
+echo    Found: %JAVA_HOME%
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 
 :: --- Step 2: Find Maven ---
 echo [2] Looking for Maven...
 set MVN=
-for /f "tokens=*" %%i in ('where mvn.cmd 2^>nul') do if "!MVN!"=="" set "MVN=%%i"
+for /f "tokens=*" %%i in ('where mvn.cmd 2^>nul') do if "%MVN%"=="" set "MVN=%%i"
 if "%MVN%"=="" (
     for /d %%d in (
         "C:\Users\%USERNAME%\AppData\Local\Programs\maven"
         "C:\Program Files\Apache\Maven*"
     ) do (
-        if exist "%%d\bin\mvn.cmd" if "!MVN!"=="" set "MVN=%%d\bin\mvn.cmd"
+        if exist "%%d\bin\mvn.cmd" if "%MVN%"=="" set "MVN=%%d\bin\mvn.cmd"
     )
 )
 if "%MVN%"=="" (
@@ -60,13 +59,11 @@ echo    Found: %MVN%
 
 :: --- Step 3: Find Node ---
 echo [3] Looking for Node.js...
-set NODE=
-for /f "tokens=*" %%i in ('where node.exe 2^>nul') do if "!NODE!"=="" set "NODE=%%i"
+for /f "tokens=*" %%i in ('where node.exe 2^>nul') do if "%NODE%"=="" set "NODE=%%i"
 if "%NODE%"=="" (
     echo [FAIL] Node.js not found. Install Node 16+
     pause & exit /b 1
 )
-for %%n in ("%NODE%") do set "NPM=%%~dpnnpm.cmd"
 echo    Found: %NODE%
 
 :: --- Step 4: Start MySQL ---
@@ -74,8 +71,8 @@ echo [4] Starting MySQL...
 tasklist /fi "imagename eq mysqld.exe" 2>nul | find /i "mysqld" >nul
 if errorlevel 1 (
     set "MYSQLD=%MYSQL_DIR%\bin\mysqld.exe"
-    if not exist "!MYSQLD!" set "MYSQLD=mysqld.exe"
-    start /b "" "!MYSQLD!" --standalone --datadir="%MYSQL_DATA%" >nul 2>&1
+    if not exist "%MYSQLD%" set "MYSQLD=mysqld.exe"
+    start /b "" "%MYSQLD%" --standalone --datadir="%MYSQL_DATA%" >nul 2>&1
     timeout /t 4 /nobreak >nul
 )
 tasklist /fi "imagename eq mysqld.exe" 2>nul | find /i "mysqld" >nul
@@ -99,9 +96,9 @@ if errorlevel 1 (
 
 :: --- Step 6: Start Backend ---
 echo [6] Starting backend (port %PORT_BACK%)...
-set JASYPT_ENCRYPTOR_PASSWORD=%JASYPT_KEY%
+set "JASYPT_ENCRYPTOR_PASSWORD=%JASYPT_KEY%"
 set "BACKEND_DIR=%~dp0chemical-measurement-backend"
-start "Backend-%PORT_BACK%" cmd /k "%~dp0backend.bat" "%JAVA_HOME%" "%JASYPT_KEY%" "%BACKEND_DIR%"
+start "Backend-%PORT_BACK%" cmd /k "%~dp0backend.bat"
 cd /d "%~dp0"
 
 :: --- Step 7: Start Frontend ---
