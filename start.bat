@@ -1,7 +1,10 @@
 @echo off
 title PFEP Coolant Detection System
 
-:: ============ CONFIG ============
+:: ============ CONFIG (生产环境请设置环境变量覆盖) ============
+::  set DB_PASSWORD=xxx          (覆盖数据库密码)
+::  set JWT_SECRET=xxx           (覆盖JWT签名密钥)
+::  set JASYPT_ENCRYPTOR_PASSWORD=xxx
 set MYSQL_DIR=C:\Program Files\MySQL\MySQL Server 8.4
 set MYSQL_DATA=C:\ProgramData\MySQL\MySQL Server 8.4\Data
 set MYSQL_USER=root

@@ -33,6 +33,7 @@ public class AdminController {
     private final WorkstationMediaIndicatorMapper wmiMapper;
     private final KnowledgeBaseMapper kbMapper;
     private final InspectionRecordMapper recordMapper;
+    private final KnowledgeSuggestionMapper suggestionMapper;
     private final IndicatorTemplateMapper indicatorMapper;
     private final UserMapper userMapper;
     private final ScheduleMapper scheduleMapper;
@@ -156,13 +157,13 @@ public class AdminController {
         Map<String, Object> result = new LinkedHashMap<>();
         Long kbCount = kbMapper.selectCount(
             new LambdaQueryWrapper<KnowledgeBase>().eq(KnowledgeBase::getMediaId, id));
-        Long suggestionCount = kbMapper.selectCount(
-            new LambdaQueryWrapper<KnowledgeBase>() // knowledge_suggestion
-                .eq(KnowledgeBase::getMediaId, id)); // won't work for suggestion table
+        Long suggestionCount = suggestionMapper.selectCount(
+            new LambdaQueryWrapper<KnowledgeSuggestion>().eq(KnowledgeSuggestion::getMediaId, id));
         Long wmCount = wmMapper.selectCount(
             new LambdaQueryWrapper<WorkstationMedia>().eq(WorkstationMedia::getMediaId, id));
 
         result.put("kbCount", kbCount);
+        result.put("suggestionCount", suggestionCount);
         result.put("wmCount", wmCount);
         return Result.success(result);
     }
@@ -319,6 +320,10 @@ public class AdminController {
     public Result<?> createUser(@RequestBody Map<String, Object> body, HttpServletRequest req) {
         if (!isManagerOrDev(req)) return authErr();
         String username = (String) body.get("username");
+        String password = (String) body.get("password");
+        if (password == null || password.length() < 8) {
+            return Result.error("密码至少8位");
+        }
         // 用户名唯一
         Long exist = userMapper.selectCount(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
         if (exist > 0) return Result.error("用户名已存在");
@@ -331,7 +336,7 @@ public class AdminController {
 
         User u = new User();
         u.setUsername(username);
-        u.setPassword(passwordEncoder.encode((String) body.get("password")));
+        u.setPassword(passwordEncoder.encode(password));
         u.setRealName((String) body.get("realName"));
         u.setRole(role);
         userMapper.insert(u);
