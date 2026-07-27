@@ -5,12 +5,12 @@ import { defineStore } from 'pinia'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
-    token: localStorage.getItem('token') || '',
-    userId: localStorage.getItem('userId') || '',
-    username: localStorage.getItem('username') || '',
-    realName: localStorage.getItem('realName') || '',
-    role: localStorage.getItem('role') || '',
-    managedLines: localStorage.getItem('managedLines') || ''
+    token: sessionStorage.getItem('token') || '',
+    userId: sessionStorage.getItem('userId') || '',
+    username: sessionStorage.getItem('username') || '',
+    realName: sessionStorage.getItem('realName') || '',
+    role: sessionStorage.getItem('role') || '',
+    managedLines: sessionStorage.getItem('managedLines') || ''
   }),
   getters: {
     isDeveloper: (state) => state.role === 'DEVELOPER',
@@ -28,12 +28,12 @@ export const useUserStore = defineStore('user', {
       this.realName = data.realName
       this.role = data.role
       this.managedLines = data.managedLines || ''
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('userId', data.userId)
-      localStorage.setItem('username', data.username)
-      localStorage.setItem('realName', data.realName)
-      localStorage.setItem('role', data.role)
-      localStorage.setItem('managedLines', data.managedLines || '')
+      sessionStorage.setItem('token', data.token)
+      sessionStorage.setItem('userId', data.userId)
+      sessionStorage.setItem('username', data.username)
+      sessionStorage.setItem('realName', data.realName)
+      sessionStorage.setItem('role', data.role)
+      sessionStorage.setItem('managedLines', data.managedLines || '')
     },
     logout() {
       this.token = ''
@@ -42,7 +42,7 @@ export const useUserStore = defineStore('user', {
       this.realName = ''
       this.role = ''
       this.managedLines = ''
-      localStorage.clear()
+      sessionStorage.clear()
     }
   }
 })

@@ -395,15 +395,21 @@ const openUserDialog = (row) => {
   userDialog.value = true
 }
 const saveUser = async () => {
+  if (!editingUser.value && !userForm.password) {
+    ElMessage.warning('请填写密码（至少8位）'); return
+  }
   const d = { realName: userForm.realName, role: userForm.role }
   if (userForm.password) d.password = userForm.password
+  let res
   if (editingUser.value) {
-    await request.put('/admin/users/' + editingUser.value.userId, d)
+    res = await request.put('/admin/users/' + editingUser.value.userId, d)
   } else {
     d.username = userForm.username
-    await request.post('/admin/users', d)
+    res = await request.post('/admin/users', d)
   }
-  ElMessage.success('已保存'); userDialog.value = false; loadUsers()
+  if (res.code === 200) {
+    ElMessage.success('已保存'); userDialog.value = false; loadUsers()
+  }
 }
 const delUser = async (id) => {
   await ElMessageBox.confirm('确定删除该用户？其排班将被取消，检测记录创建人将被清空。', '警告', { type: 'warning' })

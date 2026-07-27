@@ -46,7 +46,7 @@ const save = async () => {
     if (form.password) { d.password = form.password; d.oldPassword = form.oldPassword }
     await request.put('/profile', d)
     userStore.realName = form.realName
-    localStorage.setItem('realName', form.realName)
+    sessionStorage.setItem('realName', form.realName)
     ElMessage.success('已保存')
     form.password = ''; form.oldPassword = ''
   } finally { saving.value = false }
