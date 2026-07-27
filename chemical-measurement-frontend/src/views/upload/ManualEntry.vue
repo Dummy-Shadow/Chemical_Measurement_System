@@ -218,7 +218,14 @@ const loadMedia = async () => {
   form.mediaId = null; indicatorList.value = []
 }
 
-const goStep2 = () => { loadIndicators(); step.value = 2 }
+const goStep2 = () => {
+  if (selectedMediaInfo.value && selectedMediaInfo.value.entryLabel.includes('异常')) {
+    goRetest()
+    return
+  }
+  loadIndicators()
+  step.value = 2
+}
 
 const loadIndicators = async () => {
   loadingIndicators.value = true

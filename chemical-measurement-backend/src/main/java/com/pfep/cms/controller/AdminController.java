@@ -479,13 +479,19 @@ public class AdminController {
     }
 
     private boolean isDev(HttpServletRequest req) {
-        String role = (String) req.getAttribute("role");
-        return "DEVELOPER".equals(role);
+        return hasRole("DEVELOPER");
     }
 
     private boolean isManagerOrDev(HttpServletRequest req) {
-        String role = (String) req.getAttribute("role");
-        return "DEVELOPER".equals(role) || "AREA_MANAGER".equals(role);
+        return hasRole("DEVELOPER") || hasRole("AREA_MANAGER");
+    }
+
+    private boolean hasRole(String role) {
+        try {
+            return SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_" + role));
+        } catch (Exception e) { return false; }
     }
 
     private Result<?> authErr() { return Result.error(403, "权限不足"); }
