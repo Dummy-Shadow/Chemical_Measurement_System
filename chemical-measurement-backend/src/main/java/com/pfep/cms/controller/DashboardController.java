@@ -26,6 +26,8 @@ public class DashboardController {
     private final MediaMapper mediaMapper;
     private final InspectionIndicatorValueMapper valueMapper;
     private final IndicatorTemplateMapper indicatorTemplateMapper;
+    private final ProductionLineMapper lineMapper;
+    private final WorkstationMediaMapper wmMapper;
 
     @Operation(summary = "获取首页统计数据")
     @GetMapping("/stats")
@@ -69,11 +71,38 @@ public class DashboardController {
         }
 
         LocalDate weekStart = today.with(DayOfWeek.MONDAY);
-        long weeklySpotCheckCount = recordMapper.selectCount(
+        List<InspectionRecord> spotChecks = recordMapper.selectList(
             new LambdaQueryWrapper<InspectionRecord>()
                 .ge(InspectionRecord::getInspectionDate, weekStart)
                 .le(InspectionRecord::getInspectionDate, today)
                 .eq(InspectionRecord::getInspectionType, "SPOT_CHECK"));
+        Set<String> checkedCombos = new HashSet<>();
+        for (InspectionRecord r : spotChecks) {
+            checkedCombos.add(r.getStationId() + "_" + r.getMediaId());
+        }
+
+        List<ProductionLine> allLines = lineMapper.selectList(null);
+        long completedSpotCheckLines = 0;
+        for (ProductionLine line : allLines) {
+            List<Workstation> lineStations = workstationMapper.selectList(
+                new LambdaQueryWrapper<Workstation>().eq(Workstation::getLineId, line.getLineId()));
+            if (lineStations.isEmpty()) { completedSpotCheckLines++; continue; }
+            boolean allDone = true;
+            for (Workstation ws : lineStations) {
+                List<WorkstationMedia> wms = wmMapper.selectList(
+                    new LambdaQueryWrapper<WorkstationMedia>().eq(WorkstationMedia::getStationId, ws.getStationId()));
+                for (WorkstationMedia wm : wms) {
+                    if (!checkedCombos.contains(wm.getStationId() + "_" + wm.getMediaId())) {
+                        allDone = false;
+                        break;
+                    }
+                }
+                if (!allDone) break;
+            }
+            if (allDone) completedSpotCheckLines++;
+        }
+        long pendingSpotCheckLines = allLines.size() - completedSpotCheckLines;
+        boolean spotCheckAllDone = (completedSpotCheckLines == allLines.size());
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("detectionCount", detectionCount);
@@ -84,7 +113,10 @@ public class DashboardController {
         data.put("retestOkCount", retestOkCount);
         data.put("warnCount", warnCount);
         data.put("overCount", overCount);
-        data.put("weeklySpotCheckCount", weeklySpotCheckCount);
+        data.put("completedSpotCheckLines", completedSpotCheckLines);
+        data.put("pendingSpotCheckLines", pendingSpotCheckLines);
+        data.put("totalLines", (long) allLines.size());
+        data.put("spotCheckAllDone", spotCheckAllDone);
         return Result.success(data);
     }
 

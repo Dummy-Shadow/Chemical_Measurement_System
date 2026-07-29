@@ -28,8 +28,11 @@
       </el-col>
       <el-col :span="8">
         <el-card shadow="hover" class="stat-card" style="border-left-color: #909399">
-          <div class="stat-text">本周抽检 <b>{{ stats.weeklySpotCheckCount }}</b> 次</div>
-          <div class="stat-sub">（不计入上述统计）</div>
+          <div v-if="stats.spotCheckAllDone" class="stat-text" style="color:#67C23A">本周抽检已完成</div>
+          <div v-else class="stat-text">
+            已完成抽检 <b>{{ stats.completedSpotCheckLines || 0 }}</b> / <b>{{ stats.totalLines || 0 }}</b> 条产线
+          </div>
+          <div class="stat-sub">（未检测 {{ stats.pendingSpotCheckLines || 0 }} 条）</div>
         </el-card>
       </el-col>
     </el-row>
@@ -115,7 +118,9 @@ import * as echarts from 'echarts'
 const stats = reactive({
   detectionCount: 0, completedCount: 0, pendingRetestCount: 0,
   abnormalCount: 0, normalCount: 0, retestOkCount: 0,
-  warnCount: 0, overCount: 0, weeklySpotCheckCount: 0
+  warnCount: 0, overCount: 0,
+  completedSpotCheckLines: 0, pendingSpotCheckLines: 0, totalLines: 0,
+  spotCheckAllDone: false
 })
 const abnormalList = ref([])
 const knowledgeList = ref([])
