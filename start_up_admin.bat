@@ -23,23 +23,31 @@ echo.
 :: =============================================
 
 :: ============ CONFIG ============
-:: MySQL 路径（默认自动发现）
+:: MySQL 路径（按优先级自动发现，也可手动设置 MYSQL_DIR 环境变量）
 if not defined MYSQL_DIR (
-    for /d %%d in (
-        "C:\Program Files\MySQL\*"
-        "D:\Program Files\MySQL\*"
-    ) do (
-        if exist "%%d\bin\mysql.exe" if not defined MYSQL_DIR set "MYSQL_DIR=%%d"
-    )
+    if exist "C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe" set "MYSQL_DIR=C:\Program Files\MySQL\MySQL Server 8.4"
+)
+if not defined MYSQL_DIR (
+    if exist "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" set "MYSQL_DIR=C:\Program Files\MySQL\MySQL Server 8.0"
+)
+if not defined MYSQL_DIR (
+    if exist "D:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe" set "MYSQL_DIR=D:\Program Files\MySQL\MySQL Server 8.4"
+)
+if not defined MYSQL_DIR (
+    if exist "D:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" set "MYSQL_DIR=D:\Program Files\MySQL\MySQL Server 8.0"
 )
 if not defined MYSQL_DIR set "MYSQL_DIR=C:\Program Files\MySQL\MySQL Server 8.4"
 if not defined MYSQL_DATA (
-    for /d %%d in (
-        "C:\ProgramData\MySQL\*"
-        "D:\ProgramData\MySQL\*"
-    ) do (
-        if exist "%%d\Data" if not defined MYSQL_DATA set "MYSQL_DATA=%%d\Data"
-    )
+    if exist "C:\ProgramData\MySQL\MySQL Server 8.4\Data" set "MYSQL_DATA=C:\ProgramData\MySQL\MySQL Server 8.4\Data"
+)
+if not defined MYSQL_DATA (
+    if exist "C:\ProgramData\MySQL\MySQL Server 8.0\Data" set "MYSQL_DATA=C:\ProgramData\MySQL\MySQL Server 8.0\Data"
+)
+if not defined MYSQL_DATA (
+    if exist "D:\ProgramData\MySQL\MySQL Server 8.4\Data" set "MYSQL_DATA=D:\ProgramData\MySQL\MySQL Server 8.4\Data"
+)
+if not defined MYSQL_DATA (
+    if exist "D:\ProgramData\MySQL\MySQL Server 8.0\Data" set "MYSQL_DATA=D:\ProgramData\MySQL\MySQL Server 8.0\Data"
 )
 if not defined MYSQL_DATA set "MYSQL_DATA=C:\ProgramData\MySQL\MySQL Server 8.4\Data"
 set MYSQL_USER=root
