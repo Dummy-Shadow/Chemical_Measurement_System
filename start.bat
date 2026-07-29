@@ -3,12 +3,32 @@ title PFEP Coolant Detection System
 
 :: ============ CONFIG (生产环境请设置环境变量覆盖) ============
 ::  set DB_PASSWORD=xxx          (覆盖数据库密码)
+::  set DB_HOST=192.168.x.x      (MySQL服务器地址，默认localhost)
 ::  set JWT_SECRET=xxx           (覆盖JWT签名密钥)
 ::  set JASYPT_ENCRYPTOR_PASSWORD=xxx
-set MYSQL_DIR=C:\Program Files\MySQL\MySQL Server 8.4
-set MYSQL_DATA=C:\ProgramData\MySQL\MySQL Server 8.4\Data
+::  set CORS_ORIGINS=http://server-ip:3000  (内网部署时设为本机地址)
+:: === MySQL 路径（默认自动发现，通常在C:\Program Files\MySQL下）===
+if not defined MYSQL_DIR (
+    for /d %%d in (
+        "C:\Program Files\MySQL\*"
+        "D:\Program Files\MySQL\*"
+    ) do (
+        if exist "%%d\bin\mysql.exe" if not defined MYSQL_DIR set "MYSQL_DIR=%%d"
+    )
+)
+if not defined MYSQL_DIR set "MYSQL_DIR=C:\Program Files\MySQL\MySQL Server 8.4"
+if not defined MYSQL_DATA (
+    for /d %%d in (
+        "C:\ProgramData\MySQL\*"
+        "D:\ProgramData\MySQL\*"
+    ) do (
+        if exist "%%d\Data" if not defined MYSQL_DATA set "MYSQL_DATA=%%d\Data"
+    )
+)
+if not defined MYSQL_DATA set "MYSQL_DATA=C:\ProgramData\MySQL\MySQL Server 8.4\Data"
 set MYSQL_USER=root
 set MYSQL_PASS=admin123
+set MYSQL_HOST=127.0.0.1
 set JASYPT_KEY=pfep-cms-master-key-2026
 set PORT_BACK=8090
 set PORT_FRONT=3000
@@ -87,11 +107,12 @@ if errorlevel 1 (
 )
 
 :: --- Step 5: Init DB ---
-echo [5] Checking database...
-"%MYSQL_DIR%\bin\mysql.exe" -u%MYSQL_USER% -p%MYSQL_PASS% --host=127.0.0.1 --default-character-set=utf8mb4 -e "SELECT 1 FROM user LIMIT 1" chemical_measurement >nul 2>&1
+echo [5] Checking database (host: %MYSQL_HOST%)...
+if not defined MYSQL_DIR set "MYSQL_DIR=."
+"%MYSQL_DIR%\bin\mysql.exe" -u%MYSQL_USER% -p%MYSQL_PASS% --host=%MYSQL_HOST% --default-character-set=utf8mb4 -e "SELECT 1 FROM user LIMIT 1" chemical_measurement >nul 2>&1
 if errorlevel 1 (
     echo    First run - initializing database...
-    "%MYSQL_DIR%\bin\mysql.exe" -u%MYSQL_USER% -p%MYSQL_PASS% --host=127.0.0.1 --default-character-set=utf8mb4 < "%~dp0chemical-measurement-backend\sql\init.sql" 2>nul
+    "%MYSQL_DIR%\bin\mysql.exe" -u%MYSQL_USER% -p%MYSQL_PASS% --host=%MYSQL_HOST% --default-character-set=utf8mb4 < "%~dp0chemical-measurement-backend\sql\init.sql" 2>nul
     echo    Database initialized.
 ) else (
     echo    Database ready.
@@ -103,6 +124,8 @@ set "JASYPT_ENCRYPTOR_PASSWORD=%JASYPT_KEY%"
 if not defined JWT_SECRET set "JWT_SECRET=start-bat-fallback-key-do-not-use-in-production"
 if not defined DB_PASSWORD set "DB_PASSWORD=admin123"
 set APP_MODE=prod
+set SPRING_PROFILES_ACTIVE=prod
+if not defined CORS_ORIGINS set "CORS_ORIGINS=http://localhost:3000,http://localhost:3001"
 start "Backend-%PORT_BACK%" cmd /k "%~dp0backend.bat"
 cd /d "%~dp0"
 
@@ -119,13 +142,15 @@ cd /d "%~dp0"
 :: --- Done ---
 echo.
 echo ================================================
-echo   System starting...
-echo   Backend:    http://localhost:%PORT_BACK%
-echo   Frontend:   http://localhost:%PORT_FRONT%
-echo   API Docs:   http://localhost:%PORT_BACK%/doc.html
+echo   PFEP System starting (Production Mode)...
 echo.
-echo   Accounts (password: 123456)
-echo     dev_admin / area_mgr / inspector_a / inspector_b
+echo   本机访问:
+echo     Frontend:   http://localhost:%PORT_FRONT%
+echo     Backend:    http://localhost:%PORT_BACK%
+echo     API Docs:   http://localhost:%PORT_BACK%/doc.html
+echo.
+echo   内网其他电脑访问:
+echo     http://<此电脑IP>:%PORT_FRONT%
 echo ================================================
 echo.
 echo   Opening browser in 5 seconds...

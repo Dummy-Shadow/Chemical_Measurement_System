@@ -6,7 +6,7 @@ spring:
   application:
     name: chemical-measurement-system
   profiles:
-    active: dev
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
 app:
   mode: ${APP_MODE:prod}
