@@ -53,15 +53,12 @@ echo.
 echo [1] Looking for Java...
 set JAVA=
 for /f "tokens=*" %%i in ('where java.exe 2^>nul') do if "%JAVA%"=="" set "JAVA=%%i"
-if "%JAVA%"=="" (
-    for /d %%d in (
-        "C:\Program Files\Java\*"
-        "C:\Program Files\Eclipse Adoptium\*"
-        "C:\Program Files\JetBrains\*"
-    ) do (
-        if exist "%%d\bin\java.exe" if "%JAVA%"=="" set "JAVA=%%d\bin\java.exe"
-    )
-)
+if "%JAVA%"=="" if exist "C:\Program Files\Java\jdk-11\bin\java.exe" set "JAVA=C:\Program Files\Java\jdk-11\bin\java.exe"
+if "%JAVA%"=="" if exist "C:\Program Files\Java\jdk-17\bin\java.exe" set "JAVA=C:\Program Files\Java\jdk-17\bin\java.exe"
+if "%JAVA%"=="" if exist "C:\Program Files\Java\jdk-21\bin\java.exe" set "JAVA=C:\Program Files\Java\jdk-21\bin\java.exe"
+if "%JAVA%"=="" if exist "C:\Program Files\Eclipse Adoptium\jdk-11.0.20.8-hotspot\bin\java.exe" set "JAVA=C:\Program Files\Eclipse Adoptium\jdk-11.0.20.8-hotspot\bin\java.exe"
+if "%JAVA%"=="" if exist "C:\Program Files\Eclipse Adoptium\jdk-17.0.8.7-hotspot\bin\java.exe" set "JAVA=C:\Program Files\Eclipse Adoptium\jdk-17.0.8.7-hotspot\bin\java.exe"
+if "%JAVA%"=="" if exist "C:\Program Files\JetBrains\PyCharm 2024.1.4\jbr\bin\java.exe" set "JAVA=C:\Program Files\JetBrains\PyCharm 2024.1.4\jbr\bin\java.exe"
 if "%JAVA%"=="" (
     echo [FAIL] Java not found. Install JDK 11+
     pause & exit /b 1
@@ -74,14 +71,8 @@ set "PATH=%JAVA_HOME%\bin;%PATH%"
 echo [2] Looking for Maven...
 set MVN=
 for /f "tokens=*" %%i in ('where mvn.cmd 2^>nul') do if "%MVN%"=="" set "MVN=%%i"
-if "%MVN%"=="" (
-    for /d %%d in (
-        "C:\Users\%USERNAME%\AppData\Local\Programs\maven"
-        "C:\Program Files\Apache\Maven*"
-    ) do (
-        if exist "%%d\bin\mvn.cmd" if "%MVN%"=="" set "MVN=%%d\bin\mvn.cmd"
-    )
-)
+if "%MVN%"=="" if exist "C:\Users\%USERNAME%\AppData\Local\Programs\maven\bin\mvn.cmd" set "MVN=C:\Users\%USERNAME%\AppData\Local\Programs\maven\bin\mvn.cmd"
+if "%MVN%"=="" if exist "C:\Program Files\Apache\maven\bin\mvn.cmd" set "MVN=C:\Program Files\Apache\maven\bin\mvn.cmd"
 if "%MVN%"=="" (
     echo [FAIL] Maven not found. Install Maven 3.9+
     pause & exit /b 1
