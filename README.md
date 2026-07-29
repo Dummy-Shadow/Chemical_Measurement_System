@@ -75,30 +75,43 @@ BF（集中冷却）→ 5个工位         → 多种介质
 
 双击 `start.bat`，自动完成：环境检测 → MySQL启动 → 首次建库 → 启动后端(8090) → 启动前端(3000) → 打开浏览器
 
+### 裸机首次部署
+
+若服务器未安装任何依赖，运行 `deploy.bat` 进行首次部署向导。
+
+### 内网多机访问
+
+系统启动后，同一内网的其他电脑通过浏览器访问：`http://<服务器IP>:3000`
+
+所有人看到的是同一套数据库，数据天然共享。
+
+| 角色 | 登录后可见 | 适用人员 |
+|------|------|------|
+| 管理者 | 全产线数据 + 抽检 + 排班 + 导出 | 车间主管 |
+| 审核者 | 所属产线检测录入 + 我的排班 | 一线检测员 |
+
+> 生产模式下 `dev_admin` 开发者账号默认不可登录。
+
 ### 环境要求
 
 | 软件 | 版本 | 说明 |
 |------|------|------|
 | JDK | 11+ | 自动检测 |
 | Maven | 3.9+ | 自动检测 |
-| MySQL | 8.0+ | 首次自动建库 |
+| MySQL | 8.0+ | 首次自动建库（可远程） |
 | Node.js | 16+ | 自动检测 |
 
-### 开发启动
+### 生产环境配置
 
-```powershell
-# MySQL
-Start-Process "C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqld.exe" -ArgumentList "--standalone --datadir=C:\PROGRA~3\MySQL\MYSQLS~1.4\Data" -WindowStyle Minimized
+部署前根据需要设置以下环境变量（在 `start.bat` 顶部）：
 
-# 后端
-cd chemical-measurement-backend
-$env:JAVA_HOME = "C:\Program Files\JetBrains\PyCharm 2024.1.4\jbr"
-$env:Path = "$env:JAVA_HOME\bin;C:\Users\ASUS\AppData\Local\Programs\maven\bin;$env:Path"
-mvn spring-boot:run
-
-# 前端
-cd chemical-measurement-frontend
-npm run dev
+| 变量 | 默认值 | 说明 |
+|------|------|------|
+| `DB_HOST` | localhost | MySQL服务器地址 |
+| `DB_PORT` | 3306 | MySQL端口 |
+| `DB_PASSWORD` | admin123 | 数据库密码 |
+| `JWT_SECRET` | (内置fallback) | JWT签名密钥，生产必设 |
+| `CORS_ORIGINS` | http://localhost:3000 | 内网部署时设为本机IP:3000 |
 ```
 
 ### 生产构建（前端JS混淆）
