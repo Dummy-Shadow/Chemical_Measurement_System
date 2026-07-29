@@ -33,7 +33,7 @@ public class ExportController {
     public Result<List<Map<String, Object>>> exportSpotCheck(
             @RequestParam(required = false) String dateFrom,
             @RequestParam(required = false) String dateTo) {
-        if (!"AREA_MANAGER".equals(getCurrentRole())) return Result.error("权限不足");
+        if ("INSPECTOR".equals(getCurrentRole())) return Result.error("权限不足");
 
         LocalDate today = LocalDate.now();
         LocalDate from = dateFrom != null ? LocalDate.parse(dateFrom) : today.with(DayOfWeek.MONDAY);
@@ -56,7 +56,7 @@ public class ExportController {
     public Result<List<Map<String, Object>>> exportDailyInspection(
             @RequestParam(required = false) String dateFrom,
             @RequestParam(required = false) String dateTo) {
-        if (!"AREA_MANAGER".equals(getCurrentRole())) return Result.error("权限不足");
+        if ("INSPECTOR".equals(getCurrentRole())) return Result.error("权限不足");
 
         LocalDate today = LocalDate.now();
         LocalDate from = dateFrom != null ? LocalDate.parse(dateFrom) : today.with(DayOfWeek.MONDAY);

@@ -23,11 +23,11 @@ const routes = [
       { path: 'manual-entry', name: 'ManualEntry', component: () => import('@/views/upload/ManualEntry.vue'), meta: { title: '手动录入' } },
       { path: 'retest/:id', name: 'RetestEntry', component: () => import('@/views/upload/RetestEntry.vue'), meta: { title: '复测录入' } },
       { path: 'profile', name: 'Profile', component: () => import('@/views/login/Profile.vue'), meta: { title: '个人信息' } },
-      { path: 'history', name: 'History', component: () => import('@/views/inspection/HistoryView.vue'), meta: { title: '历史记录', roles: [R.MGR, R.INS] } },
+      { path: 'history', name: 'History', component: () => import('@/views/inspection/HistoryView.vue'), meta: { title: '历史记录' } },
       { path: 'inspection', name: 'InspectionList', component: () => import('@/views/inspection/InspectionList.vue'), meta: { title: '检测数据' } },
       { path: 'inspection/:id', name: 'InspectionDetail', component: () => import('@/views/inspection/InspectionDetail.vue'), meta: { title: '检测详情' } },
       { path: 'knowledge', name: 'Knowledge', component: () => import('@/views/inspection/Knowledge.vue'), meta: { title: '知识库' } },
-      { path: 'schedule', name: 'Schedule', component: () => import('@/views/admin/ScheduleManagement.vue'), meta: { title: '排班管理', roles: [R.MGR] } },
+      { path: 'schedule', name: 'Schedule', component: () => import('@/views/admin/ScheduleManagement.vue'), meta: { title: '排班管理', roles: [R.DEV, R.MGR] } },
       { path: 'my-schedule', name: 'MySchedule', component: () => import('@/views/admin/MySchedule.vue'), meta: { title: '我的排班', roles: [R.INS] } },
       { path: 'admin', name: 'Admin', component: () => import('@/views/admin/SystemManagement.vue'), meta: { title: '系统管理', roles: [R.DEV, R.MGR] } }
     ]

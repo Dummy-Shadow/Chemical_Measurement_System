@@ -18,8 +18,8 @@
           <el-icon><EditPen /></el-icon><span>手动录入</span>
         </el-menu-item>
 
-        <!-- 分区管理者 + 审核者可见 -->
-        <el-menu-item index="/history" v-if="userStore.role !== 'DEVELOPER'">
+        <!-- 全部可见 -->
+        <el-menu-item index="/history">
           <el-icon><Clock /></el-icon><span>历史记录</span>
         </el-menu-item>
 
@@ -33,8 +33,8 @@
           <el-icon><Collection /></el-icon><span>知识库</span>
         </el-menu-item>
 
-        <!-- 仅分区管理者 -->
-        <el-menu-item index="/schedule" v-if="userStore.role === 'AREA_MANAGER'">
+        <!-- 开发者 + 分区管理者可见 -->
+        <el-menu-item index="/schedule" v-if="userStore.role !== 'INSPECTOR'">
           <el-icon><Calendar /></el-icon><span>排班管理</span>
         </el-menu-item>
 

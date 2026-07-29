@@ -84,7 +84,7 @@
       </el-table>
     </el-card>
 
-    <el-card style="margin-top:20px" v-if="userStore.isAreaManager">
+    <el-card style="margin-top:20px" v-if="userStore.isAreaManager || userStore.isDeveloper">
       <template #header><span>数据导出</span></template>
       <el-button type="primary" @click="exportDaily" :loading="exportingDaily" icon="Download">
         导出审核者日常检测（本周）

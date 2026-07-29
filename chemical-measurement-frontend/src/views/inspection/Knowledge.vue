@@ -39,8 +39,8 @@
         </el-tab-pane>
 
         <!-- 建议管理 Tab（管理者+审核者） -->
-        <el-tab-pane label="建议管理" name="suggestions" v-if="!userStore.isDeveloper">
-          <div v-if="userStore.isAreaManager">
+        <el-tab-pane label="建议管理" name="suggestions">
+          <div v-if="userStore.isAreaManager || userStore.isDeveloper">
             <h4 style="margin-bottom:10px">待审批建议</h4>
             <div v-if="pendingList.length===0" style="color:#999">暂无</div>
             <div v-for="s in pendingList" :key="s.suggestionId" class="sug-item">
@@ -180,7 +180,7 @@ const loadKnowledge = async () => {
 }
 
 const loadSuggestions = async () => {
-  if(userStore.isAreaManager){ const r=await request.get('/knowledge/suggestions/pending'); if(r.code===200) pendingList.value=r.data }
+  if(userStore.isAreaManager || userStore.isDeveloper){ const r=await request.get('/knowledge/suggestions/pending'); if(r.code===200) pendingList.value=r.data }
   if(userStore.isInspector){ const r=await request.get('/knowledge/suggestions/my'); if(r.code===200) mySugList.value=r.data }
 }
 
