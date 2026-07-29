@@ -46,6 +46,18 @@ public class RetestController {
         InspectionRecord original = recordMapper.selectById(originalRecordId);
         if (original == null) return Result.error("原记录不存在");
 
+        // 检查是否已正常完结（与 entry() 一致）
+        List<InspectionRecord> previous = recordMapper.selectList(
+            new LambdaQueryWrapper<InspectionRecord>()
+                .eq(InspectionRecord::getStationId, original.getStationId())
+                .eq(InspectionRecord::getMediaId, original.getMediaId())
+                .eq(InspectionRecord::getInspectionDate, LocalDate.now())
+                .orderByDesc(InspectionRecord::getCreateTime)
+                .last("LIMIT 1"));
+        if (!previous.isEmpty() && previous.get(0).getStatus() != null && previous.get(0).getStatus() != 3) {
+            return Result.error("该工位介质今日已检测正常，无需重复复测");
+        }
+
         // 新建复测记录
         InspectionRecord retest = new InspectionRecord();
         retest.setStationId(original.getStationId());

@@ -2,28 +2,34 @@
 <template>
   <div class="dashboard">
     <el-row :gutter="20">
-      <el-col :span="6">
+      <el-col :span="4">
         <el-card shadow="hover" class="stat-card" style="border-left-color: #409EFF">
-          <div class="stat-value">{{ stats.todayTotal }}</div>
-          <div class="stat-title">今日检测</div>
+          <div class="stat-value">{{ stats.detectionCount }}</div>
+          <div class="stat-title">检测次数</div>
         </el-card>
       </el-col>
-      <el-col :span="6">
+      <el-col :span="4">
         <el-card shadow="hover" class="stat-card" style="border-left-color: #67C23A">
-          <div class="stat-value">{{ stats.normalCount }}</div>
-          <div class="stat-title">正常</div>
+          <div class="stat-value">{{ stats.completedCount }}</div>
+          <div class="stat-title">已完成</div>
         </el-card>
       </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card" style="border-left-color: #409EFF">
-          <div class="stat-value">{{ stats.retestOkCount }}</div>
-          <div class="stat-title">复测正常</div>
+      <el-col :span="4">
+        <el-card shadow="hover" class="stat-card" style="border-left-color: #F56C6C">
+          <div class="stat-value">{{ stats.pendingRetestCount }}</div>
+          <div class="stat-title">待复测</div>
         </el-card>
       </el-col>
-      <el-col :span="6">
+      <el-col :span="4">
         <el-card shadow="hover" class="stat-card" style="border-left-color: #E6A23C">
-          <div class="stat-value">{{ stats.warnCount }}</div>
-          <div class="stat-title">预警</div>
+          <div class="stat-value">{{ stats.abnormalCount }}</div>
+          <div class="stat-title">异常项目</div>
+        </el-card>
+      </el-col>
+      <el-col :span="8">
+        <el-card shadow="hover" class="stat-card" style="border-left-color: #909399">
+          <div class="stat-text">本周抽检 <b>{{ stats.weeklySpotCheckCount }}</b> 次</div>
+          <div class="stat-sub">（不计入上述统计）</div>
         </el-card>
       </el-col>
     </el-row>
@@ -42,6 +48,38 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <el-card style="margin-top:20px">
+      <template #header><span>本周异常项目清单</span></template>
+      <el-table :data="abnormalList" stripe size="small" empty-text="本周无异常项目">
+        <el-table-column label="工位" prop="stationName" width="120" />
+        <el-table-column label="介质" prop="mediaName" width="120" />
+        <el-table-column label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 3 ? 'danger' : 'warning'" size="small">
+              {{ row.status === 3 ? '超差' : '预警' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="发现方式" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.inspectionType === '抽检' ? 'info' : ''" size="small">
+              {{ row.inspectionType }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="异常指标" min-width="250">
+          <template #default="{ row }">
+            <template v-for="(ind, idx) in row.abnormalIndicators" :key="idx">
+              <el-tag :type="ind.warnStatus === 2 ? 'danger' : 'warning'" size="small" style="margin:2px">
+                {{ ind.indicatorName }}: {{ ind.value }}{{ ind.indicatorUnit }}
+              </el-tag>
+            </template>
+          </template>
+        </el-table-column>
+        <el-table-column label="日期" prop="date" width="110" />
+      </el-table>
+    </el-card>
 
     <el-card style="margin-top:20px">
       <template #header>
@@ -74,7 +112,12 @@ import { ref, reactive, onMounted, nextTick } from 'vue'
 import { dashboardApi, knowledgeApi } from '@/api'
 import * as echarts from 'echarts'
 
-const stats = reactive({ todayTotal: 0, normalCount: 0, warnCount: 0, overCount: 0, retestOkCount: 0 })
+const stats = reactive({
+  detectionCount: 0, completedCount: 0, pendingRetestCount: 0,
+  abnormalCount: 0, normalCount: 0, retestOkCount: 0,
+  warnCount: 0, overCount: 0, weeklySpotCheckCount: 0
+})
+const abnormalList = ref([])
 const knowledgeList = ref([])
 const trendChart = ref(null)
 const pieChart = ref(null)
@@ -87,6 +130,11 @@ const catTagType = (cat) => {
 const loadStats = async () => {
   const res = await dashboardApi.stats()
   if (res.code === 200) Object.assign(stats, res.data)
+}
+
+const loadAbnormal = async () => {
+  const res = await dashboardApi.weeklyAbnormal()
+  if (res.code === 200) abnormalList.value = res.data
 }
 
 const loadTrend = async () => {
@@ -134,6 +182,7 @@ const loadKnowledge = async () => {
 
 onMounted(async () => {
   await loadStats()
+  loadAbnormal()
   loadTrend()
   loadPie()
   loadKnowledge()
@@ -144,4 +193,7 @@ onMounted(async () => {
 .stat-card { border-left: 4px solid; cursor: pointer; }
 .stat-card .stat-value { font-size: 28px; font-weight: bold; color: #333; }
 .stat-card .stat-title { font-size: 14px; color: #999; margin-top: 8px; }
+.stat-card .stat-text { font-size: 16px; color: #333; line-height: 1.6; }
+.stat-card .stat-text b { font-size: 24px; margin: 0 4px; }
+.stat-card .stat-sub { font-size: 12px; color: #999; margin-top: 4px; }
 </style>

@@ -31,7 +31,8 @@ export const mediaApi = {
 
 export const dashboardApi = {
   stats: () => request.get('/dashboard/stats'),
-  trend: () => request.get('/dashboard/trend')
+  trend: () => request.get('/dashboard/trend'),
+  weeklyAbnormal: () => request.get('/dashboard/weekly-abnormal')
 }
 
 export const knowledgeApi = {
