@@ -7,6 +7,11 @@ spring:
     name: chemical-measurement-system
   profiles:
     active: dev
+
+app:
+  mode: ${APP_MODE:prod}
+
+# 生产环境下禁止开发者登录，调试模式（APP_MODE=dev）不受限
   servlet:
     multipart:
       max-file-size: 5MB

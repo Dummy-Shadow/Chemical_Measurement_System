@@ -13,6 +13,7 @@ import com.pfep.cms.service.AuthService;
 import com.pfep.cms.util.JwtUtil;
 import com.pfep.cms.vo.LoginVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -24,12 +25,18 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
+    @Value("${app.mode:prod}")
+    private String appMode;
+
     @Override
     public Result<LoginVO> login(LoginDTO loginDTO) {
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
                 .eq(User::getUsername, loginDTO.getUsername()));
         if (user == null || !passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
             return Result.unauthorized("用户名或密码错误");
+        }
+        if (!"dev".equals(appMode) && "DEVELOPER".equals(user.getRole())) {
+            return Result.error("生产环境下禁止使用开发者账号登录");
         }
         String token = jwtUtil.generateToken(user.getUserId(), user.getUsername(), user.getRole(), user.getManagedLines());
         LoginVO vo = new LoginVO();

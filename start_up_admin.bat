@@ -1,10 +1,28 @@
 @echo off
-title PFEP Coolant Detection System
+title PFEP Admin Debug Mode
 
-:: ============ CONFIG (生产环境请设置环境变量覆盖) ============
-::  set DB_PASSWORD=xxx          (覆盖数据库密码)
-::  set JWT_SECRET=xxx           (覆盖JWT签名密钥)
-::  set JASYPT_ENCRYPTOR_PASSWORD=xxx
+setlocal enabledelayedexpansion
+
+:: ============ 调试模式密码验证 ============
+set "ADMIN_PASSWORD=shjd123456"
+
+echo ================================================
+echo   PFEP Coolant Detection System
+echo   Admin Debug Mode (start_up_admin.bat)
+echo ================================================
+echo.
+set /p "INPUT_PASS=请输入调试模式密码: "
+
+if not "!INPUT_PASS!"=="%ADMIN_PASSWORD%" (
+    echo [FAIL] 密码错误，启动已取消。
+    pause
+    exit /b 1
+)
+echo [OK] 密码验证通过，进入调试模式...
+echo.
+:: =============================================
+
+:: ============ CONFIG ============
 set MYSQL_DIR=C:\Program Files\MySQL\MySQL Server 8.4
 set MYSQL_DATA=C:\ProgramData\MySQL\MySQL Server 8.4\Data
 set MYSQL_USER=root
@@ -12,14 +30,10 @@ set MYSQL_PASS=admin123
 set JASYPT_KEY=pfep-cms-master-key-2026
 set PORT_BACK=8090
 set PORT_FRONT=3000
+set APP_MODE=dev
 :: ================================
 
 cd /d "%~dp0"
-
-echo ================================================
-echo   PFEP Coolant Detection System v2.0
-echo ================================================
-echo.
 
 :: --- Step 1: Find Java ---
 echo [1] Looking for Java...
@@ -97,35 +111,34 @@ if errorlevel 1 (
     echo    Database ready.
 )
 
-:: --- Step 6: Start Backend ---
-echo [6] Starting backend (port %PORT_BACK%)...
+:: --- Step 6: Start Backend (debug mode) ---
+echo [6] Starting backend (debug mode, port %PORT_BACK%)...
 set "JASYPT_ENCRYPTOR_PASSWORD=%JASYPT_KEY%"
 if not defined JWT_SECRET set "JWT_SECRET=start-bat-fallback-key-do-not-use-in-production"
 if not defined DB_PASSWORD set "DB_PASSWORD=admin123"
-set APP_MODE=prod
+set APP_MODE=dev
 start "Backend-%PORT_BACK%" cmd /k "%~dp0backend.bat"
 cd /d "%~dp0"
 
-:: --- Step 7: Start Frontend ---
-echo [7] Starting frontend (port %PORT_FRONT%)...
+:: --- Step 7: Start Frontend (localhost) ---
+echo [7] Starting frontend (localhost, port %PORT_FRONT%)...
 cd /d "%~dp0chemical-measurement-frontend"
 if not exist "node_modules" (
     echo    First run - installing npm packages...
     call npm install
 )
-start "Frontend-%PORT_FRONT%" cmd /c "title PFEP Frontend && npm run dev -- --mode production"
+start "Frontend-%PORT_FRONT%" cmd /c "title PFEP Frontend [Admin Debug] && npm run dev"
 cd /d "%~dp0"
 
 :: --- Done ---
 echo.
 echo ================================================
-echo   System starting...
+echo   Admin Debug Mode Starting...
 echo   Backend:    http://localhost:%PORT_BACK%
 echo   Frontend:   http://localhost:%PORT_FRONT%
 echo   API Docs:   http://localhost:%PORT_BACK%/doc.html
 echo.
-echo   Accounts (password: 123456)
-echo     dev_admin / area_mgr / inspector_a / inspector_b
+echo   All accounts available (incl. dev_admin)
 echo ================================================
 echo.
 echo   Opening browser in 5 seconds...
