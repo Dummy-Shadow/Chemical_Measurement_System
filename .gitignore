@@ -21,6 +21,9 @@ Thumbs.db
 .env.local
 .env.*.local
 
+# Admin docs (internal)
+admin_document/
+
 # Logs
 logs/
 *.log
