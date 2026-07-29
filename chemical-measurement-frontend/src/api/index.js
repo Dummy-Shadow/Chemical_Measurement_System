@@ -35,6 +35,11 @@ export const dashboardApi = {
   weeklyAbnormal: () => request.get('/dashboard/weekly-abnormal')
 }
 
+export const exportApi = {
+  spotCheck: (params) => request.get('/export/spot-check', { params }),
+  dailyInspection: (params) => request.get('/export/daily-inspection', { params })
+}
+
 export const knowledgeApi = {
   list: (params) => request.get('/knowledge', { params }),
   detail: (id) => request.get(`/knowledge/${id}`),

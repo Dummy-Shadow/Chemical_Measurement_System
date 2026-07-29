@@ -84,6 +84,16 @@
       </el-table>
     </el-card>
 
+    <el-card style="margin-top:20px" v-if="userStore.isAreaManager">
+      <template #header><span>数据导出</span></template>
+      <el-button type="primary" @click="exportDaily" :loading="exportingDaily" icon="Download">
+        导出审核者日常检测（本周）
+      </el-button>
+      <el-button type="warning" @click="exportSpot" :loading="exportingSpot" icon="Download" style="margin-left:12px">
+        导出管理者抽检数据（本周）
+      </el-button>
+    </el-card>
+
     <el-card style="margin-top:20px">
       <template #header>
         <span>智能知识库推荐</span>
@@ -112,8 +122,13 @@
 
 <script setup>
 import { ref, reactive, onMounted, nextTick } from 'vue'
-import { dashboardApi, knowledgeApi } from '@/api'
+import { dashboardApi, knowledgeApi, exportApi } from '@/api'
+import { useUserStore } from '@/store/user'
 import * as echarts from 'echarts'
+import * as XLSX from 'xlsx'
+import { ElMessage } from 'element-plus'
+
+const userStore = useUserStore()
 
 const stats = reactive({
   detectionCount: 0, completedCount: 0, pendingRetestCount: 0,
@@ -178,6 +193,35 @@ const loadPie = async () => {
       color: ['#67C23A', '#409EFF', '#E6A23C', '#F56C6C']
     }]
   })
+}
+
+const exportingDaily = ref(false)
+const exportingSpot = ref(false)
+
+const doExport = async (apiFn, filenamePrefix) => {
+  const res = await apiFn()
+  if (res.code !== 200) { ElMessage.error('导出失败'); return }
+  const data = res.data || []
+  if (!data.length) { ElMessage.warning('无数据可导出'); return }
+  const ws = XLSX.utils.json_to_sheet(data)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1')
+  const now = new Date()
+  const dstr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')
+  XLSX.writeFile(wb, `${filenamePrefix}_${dstr}.xlsx`)
+  ElMessage.success('导出成功')
+}
+
+const exportDaily = async () => {
+  exportingDaily.value = true
+  try { await doExport(() => exportApi.dailyInspection(), 'PFEP日常检测') } 
+  finally { exportingDaily.value = false }
+}
+
+const exportSpot = async () => {
+  exportingSpot.value = true
+  try { await doExport(() => exportApi.spotCheck(), 'PFEP抽检数据') }
+  finally { exportingSpot.value = false }
 }
 
 const loadKnowledge = async () => {
