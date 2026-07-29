@@ -22,6 +22,7 @@ public class InspectionRecord {
     private Integer status;
     private String entryType;
     private Long entryUserId;
+    private String inspectionType;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     @TableField(fill = FieldFill.INSERT_UPDATE)

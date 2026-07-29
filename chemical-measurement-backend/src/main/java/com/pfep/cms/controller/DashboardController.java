@@ -1,6 +1,3 @@
-// Copyright (c) 2026 郑杭宇. All rights reserved.
-// Licensed under the MIT License. See LICENSE file.
-
 package com.pfep.cms.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -10,6 +7,7 @@ import com.pfep.cms.mapper.InspectionRecordMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -27,9 +25,12 @@ public class DashboardController {
     @GetMapping("/stats")
     public Result<Map<String, Object>> stats() {
         LocalDate today = LocalDate.now();
-        List<InspectionRecord> allToday = recordMapper.selectList(
-            new LambdaQueryWrapper<InspectionRecord>().eq(InspectionRecord::getInspectionDate, today)
-                .orderByAsc(InspectionRecord::getCreateTime));
+        LambdaQueryWrapper<InspectionRecord> w = new LambdaQueryWrapper<InspectionRecord>()
+                .eq(InspectionRecord::getInspectionDate, today);
+        if ("INSPECTOR".equals(getCurrentRole())) {
+            w.eq(InspectionRecord::getInspectionType, "DAILY");
+        }
+        List<InspectionRecord> allToday = recordMapper.selectList(w.orderByAsc(InspectionRecord::getCreateTime));
 
         Map<String, List<InspectionRecord>> groups = new LinkedHashMap<>();
         for (InspectionRecord r : allToday) {
@@ -45,7 +46,6 @@ public class DashboardController {
                 else if (latest.getStatus() == 2) warnCount++;
                 else normalCount++;
             } else {
-                // 有复测：看最早一次是否异常
                 InspectionRecord first = list.get(0);
                 boolean wasAbnormal = first.getStatus() == 3 || first.getStatus() == 2;
                 if (latest.getStatus() == 1 && wasAbnormal) retestOkCount++;
@@ -69,13 +69,14 @@ public class DashboardController {
     public Result<List<Map<String, Object>>> trend() {
         LocalDate today = LocalDate.now();
         LocalDate sevenDaysAgo = today.minusDays(6);
-        List<InspectionRecord> allInRange = recordMapper.selectList(
-            new LambdaQueryWrapper<InspectionRecord>()
+        LambdaQueryWrapper<InspectionRecord> w = new LambdaQueryWrapper<InspectionRecord>()
                 .ge(InspectionRecord::getInspectionDate, sevenDaysAgo)
-                .le(InspectionRecord::getInspectionDate, today)
-                .orderByAsc(InspectionRecord::getCreateTime));
+                .le(InspectionRecord::getInspectionDate, today);
+        if ("INSPECTOR".equals(getCurrentRole())) {
+            w.eq(InspectionRecord::getInspectionType, "DAILY");
+        }
+        List<InspectionRecord> allInRange = recordMapper.selectList(w.orderByAsc(InspectionRecord::getCreateTime));
 
-        // 先按日期分组，再按(station,media)分组
         Map<LocalDate, Map<String, List<InspectionRecord>>> dateGroups = new LinkedHashMap<>();
         for (InspectionRecord r : allInRange) {
             dateGroups.computeIfAbsent(r.getInspectionDate(), k -> new LinkedHashMap<>())
@@ -112,5 +113,13 @@ public class DashboardController {
             result.add(day);
         }
         return Result.success(result);
+    }
+
+    private String getCurrentRole() {
+        try {
+            return SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                .stream().map(Object::toString).filter(s -> s.startsWith("ROLE_"))
+                .map(s -> s.substring(5)).findFirst().orElse(null);
+        } catch (Exception e) { return null; }
     }
 }

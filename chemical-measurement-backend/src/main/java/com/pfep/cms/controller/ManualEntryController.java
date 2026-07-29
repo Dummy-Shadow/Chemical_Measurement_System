@@ -195,7 +195,12 @@ public class ManualEntryController {
         record.setEntryType("MANUAL");
         String username = getCurrentUsername();
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
-        if (user != null) record.setEntryUserId(user.getUserId());
+        if (user != null) {
+            record.setEntryUserId(user.getUserId());
+            // 审核者→DAILY，管理者→SPOT_CHECK, 开发者不限制
+            record.setInspectionType("DEVELOPER".equals(user.getRole()) ? null : 
+                ("INSPECTOR".equals(user.getRole()) ? "DAILY" : "SPOT_CHECK"));
+        }
         recordMapper.insert(record);
 
         int warnCount = 0, overCount = 0;
@@ -275,6 +280,11 @@ public class ManualEntryController {
         if (lineId != null)
             wrapper.inSql(InspectionRecord::getStationId,
                 "SELECT station_id FROM workstation WHERE line_id = " + lineId);
+        // 审核者只能看DAILY数据，管理者看全部
+        String role = getCurrentRole();
+        if ("INSPECTOR".equals(role)) {
+            wrapper.eq(InspectionRecord::getInspectionType, "DAILY");
+        }
         wrapper.orderByDesc(InspectionRecord::getInspectionDate, InspectionRecord::getCreateTime);
         IPage<InspectionRecord> pageResult = recordMapper.selectPage(new Page<>(page, size), wrapper);
 
@@ -435,12 +445,14 @@ public class ManualEntryController {
     @GetMapping("/history-records")
     public Result<List<Map<String, Object>>> historyRecords(
             @RequestParam Long stationId, @RequestParam Long mediaId, @RequestParam String date) {
-        List<InspectionRecord> records = recordMapper.selectList(
-            new LambdaQueryWrapper<InspectionRecord>()
+        LambdaQueryWrapper<InspectionRecord> w = new LambdaQueryWrapper<InspectionRecord>()
                 .eq(InspectionRecord::getStationId, stationId)
                 .eq(InspectionRecord::getMediaId, mediaId)
-                .eq(InspectionRecord::getInspectionDate, LocalDate.parse(date))
-                .orderByAsc(InspectionRecord::getCreateTime));
+                .eq(InspectionRecord::getInspectionDate, LocalDate.parse(date));
+        if ("INSPECTOR".equals(getCurrentRole())) {
+            w.eq(InspectionRecord::getInspectionType, "DAILY");
+        }
+        List<InspectionRecord> records = recordMapper.selectList(w.orderByAsc(InspectionRecord::getCreateTime));
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (InspectionRecord r : records) {
@@ -481,6 +493,14 @@ public class ManualEntryController {
             result.add(rec);
         }
         return Result.success(result);
+    }
+
+    private String getCurrentRole() {
+        try {
+            return SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                .stream().map(Object::toString).filter(s -> s.startsWith("ROLE_"))
+                .map(s -> s.substring(5)).findFirst().orElse(null);
+        } catch (Exception e) { return null; }
     }
 
     private String getCurrentUsername() {
