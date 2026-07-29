@@ -23,15 +23,15 @@ Chemical_Measurement_System/
 ├── backend.bat                        # 后端启动子脚本
 ├── LICENSE                            # MIT License
 ├── README.md
-├── chemical-measurement-backend/      # Spring Boot 后端 (65 源文件)
+├── chemical-measurement-backend/      # Spring Boot 后端 (66 源文件)
 │   ├── pom.xml
 │   ├── sql/init.sql                   # 完整建表+种子数据(4测试账号)
 │   └── src/main/java/com/pfep/cms/
 │       ├── config/      SecurityConfig, JwtAuthenticationFilter
 │       ├── controller/  AdminController, AuthController, DashboardController,
-│       │                KnowledgeBaseController, ManualEntryController,
-│       │                OcrController, ProfileController, RetestController,
-│       │                ScheduleController, MediaController, etc.
+│       │                ExportController, KnowledgeBaseController,
+│       │                ManualEntryController, OcrController, ProfileController,
+│       │                RetestController, ScheduleController, MediaController, etc.
 │       ├── service/     AuthService, InspectionService, OcrService, WarningService
 │       ├── mapper/      16个Mapper接口
 │       ├── entity/      16个实体类
@@ -113,11 +113,24 @@ npm run build   # 输出混淆后文件到 dist/
 | 角色 | 用户名 | 密码 | 管辖 | 系统管理 | 排班 | 知识库 |
 |------|--------|------|:---:|:---:|:---:|:---:|
 | 开发者 | dev_admin | 123456 | 全部 | ✅ | ❌ | ✅ |
-| 分区管理者 | area_mgr | 123456 | 全部 | ✅ | ✅ | 审核 |
+| 分区管理者 | area_mgr | 123456 | 全部 | ✅ | ✅ | ✅ 增删改 |
 | 审核者A | inspector_a | 123456 | ZKG,ZK | ❌ | 查看 | 提建议 |
 | 审核者B | inspector_b | 123456 | KW,PL,BF | ❌ | 查看 | 提建议 |
 
 > **多Tab登录：** 使用 `sessionStorage` 存储Token，不同浏览器Tab可同时登录不同账号互不干扰。关闭浏览器后自动清除登录状态，下次启动回到登录页。
+
+## 角色数据隔离
+
+系统通过 `inspection_type` 字段实现审核者与管理者数据隔离：
+
+| 角色 | 录入自动标记 | 可见范围 |
+|------|------|------|
+| 审核者 (INSPECTOR) | DAILY（日常检测） | 仅DAILY数据 |
+| 管理者 (AREA_MANAGER) | SPOT_CHECK（抽检） | 全部（DAILY + SPOT_CHECK） |
+| 开发者 (DEVELOPER) | NULL（无限制） | 全部 |
+
+- 检测内容和指标模板两个角色完全一致
+- 管理者抽检数据不计入日常检测统计，独立显示在仪表盘
 
 ## 系统管理
 
@@ -132,21 +145,54 @@ npm run build   # 输出混淆后文件到 dist/
 
 分区管理者操作：一键排班（全部产线排同一人）/ 逐线安排 / 取消
 审核者操作：查看自己排班 / 申请变更（换人/取消）→ 管理者审批
+审核者仅能在已排班的产线内进行手动录入
 
 ## 知识库
 
 三级流程：审核者提建议 → 管理者审核（采纳/拒绝，可修改建议内容）→ 生成知识条目
 
 每条知识关联四级业务定位：产线 → 工位 → 介质 → 指标
+管理者和开发者可增删改知识条目；审核者仅可提交建议
 
 ## 复测管理
 
-超差 → 手动录入页介标注"待复测" → 点击复测按钮 → 表单展示原异常值 → 填复测值提交
-→ 页面保留显示Timeline复测链 → 仪表盘自动判定"复测正常"
+支持多次复测，无次数上限：
+- 录入后超差（status=3）→ 手动录入页介标注"待复测"
+- 点击复测按钮 → 表单展示原异常值 → 填复测值提交
+- 每次复测生成新 InspectionRecord（entryType=RETEST）
+- 复测后正常/预警即锁定，不再允许对同一工位介质继续录入
+- 页面展示复测链 Timeline
+- 后端 entry() 和 submitRetest() 均校验 latest.status≠3 时拒绝写入
 
 ## 仪表盘
 
-5统计卡片（今日检测/正常/复测正常/预警/超差）+ 7天4线趋势图 + 4色饼图 + 知识库推荐
+### 统计卡片（5+1列）
+
+| 卡片 | 说明 |
+|------|------|
+| 检测次数 | 当日所有日常检测记录数（不按工位介质去重） |
+| 已完成 | 当日有检测记录的独立工位+介质组合数 |
+| 待复测 | 当日最终状态为超差（status=3）待处理的工位介质组合数 |
+| 异常项目 | 当日最终状态为预警或超差的工位介质组合数 |
+| 本周抽检 | 已完成抽检产线条数 / 总产线条数；全部完成显示"本周抽检已完成" |
+
+### 图表
+
+- 7天4线趋势图（正常/复测正常/预警/超差），排除抽检数据
+- 4色饼图（同上分类）
+
+### 本周异常清单
+
+汇总本周全部异常项目（不分角色，日常+抽检均显示），含工位、介质、异常指标及实测值、发现方式、日期。
+
+### 数据导出（管理者）
+
+| 导出项 | 说明 |
+|------|------|
+| 审核者日常检测 | 本周全部审核者 DAILY 数据，导出为 Excel (.xlsx) |
+| 管理者抽检数据 | 本周管理者本人 SPOT_CHECK 数据，导出为 Excel (.xlsx) |
+
+导出字段：产线、工位、介质、检测人、日期、指标名、指标值、状态、检测类型
 
 ## 安全
 
@@ -169,12 +215,14 @@ npm run build   # 输出混淆后文件到 dist/
 | 手动录入 + 复测 | ✅ |
 | 历史记录查看 | ✅ |
 | 检测数据列表 + Excel导出 | ✅ |
-| 仪表盘统计 | ✅ |
+| 仪表盘统计（独立计数+多次复测+本周异常清单） | ✅ |
+| 角色数据隔离（DAILY/SPOT_CHECK） | ✅ |
 | 知识库三级流程 | ✅ |
 | 三级权限 + 路由守卫 | ✅ |
 | 排班管理 | ✅ |
 | 系统管理 CRUD + 用户管理 | ✅ |
 | 操作日志查看 | ✅ |
+| 管理者数据导出（Excel） | ✅ |
 | 拍照上传 OCR | ⚠️ 模拟数据 |
 | 级联删除保护 | ✅ |
 | 一键启动交付 | ✅ |
