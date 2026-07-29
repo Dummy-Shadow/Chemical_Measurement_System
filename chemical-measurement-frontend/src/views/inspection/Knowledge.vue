@@ -31,7 +31,7 @@
             <el-table-column label="操作" width="100" v-if="userStore.isDeveloper || userStore.isAreaManager">
               <template #default="{ row }">
                 <el-button type="primary" link @click.stop="editKb(row)">编辑</el-button>
-                <el-button v-if="userStore.isDeveloper" type="danger" link @click.stop="deleteKb(row.kbId)">删除</el-button>
+                <el-button v-if="userStore.isDeveloper || userStore.isAreaManager" type="danger" link @click.stop="deleteKb(row.kbId)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>

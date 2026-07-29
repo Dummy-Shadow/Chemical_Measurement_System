@@ -82,6 +82,7 @@ public class KnowledgeBaseController {
     @Operation(summary = "开发者/管理者直接添加知识")
     @PostMapping
     public Result<?> create(@RequestBody Map<String, Object> body) {
+        if ("INSPECTOR".equals(getCurrentRole())) return Result.error("权限不足");
         KnowledgeBase kb = new KnowledgeBase();
         fillKbFromBody(kb, body);
         kb.setSourceType("DIRECT");
@@ -94,6 +95,7 @@ public class KnowledgeBaseController {
     @Operation(summary = "编辑知识条目")
     @PutMapping("/{id}")
     public Result<?> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        if ("INSPECTOR".equals(getCurrentRole())) return Result.error("权限不足");
         KnowledgeBase kb = kbMapper.selectById(id);
         if (kb == null) return Result.error("不存在");
         fillKbFromBody(kb, body);
@@ -104,6 +106,7 @@ public class KnowledgeBaseController {
     @Operation(summary = "删除知识条目")
     @DeleteMapping("/{id}")
     public Result<?> delete(@PathVariable Long id) {
+        if ("INSPECTOR".equals(getCurrentRole())) return Result.error("权限不足");
         kbMapper.deleteById(id);
         return Result.success();
     }
@@ -209,6 +212,14 @@ public class KnowledgeBaseController {
             m.put("suggestedByName", reqUser != null ? reqUser.getRealName() : "");
             return m;
         }).collect(Collectors.toList());
+    }
+
+    private String getCurrentRole() {
+        try {
+            return SecurityContextHolder.getContext().getAuthentication().getAuthorities()
+                .stream().map(Object::toString).filter(s -> s.startsWith("ROLE_"))
+                .map(s -> s.substring(5)).findFirst().orElse(null);
+        } catch (Exception e) { return null; }
     }
 
     private Long getUserId() {
