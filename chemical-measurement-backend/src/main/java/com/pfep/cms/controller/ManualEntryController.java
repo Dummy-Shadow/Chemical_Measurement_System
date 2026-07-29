@@ -172,12 +172,13 @@ public class ManualEntryController {
                         .eq(WorkstationMedia::getMediaId, dto.getMediaId()));
         if (wm == null) return Result.error("工位-介质未配置");
 
-        // 检查是否已正常完结（锁定）
+        // 检查是否已正常完结（锁定）——排除DEVELOPER测试条目
         List<InspectionRecord> previous = recordMapper.selectList(
             new LambdaQueryWrapper<InspectionRecord>()
                 .eq(InspectionRecord::getStationId, dto.getStationId())
                 .eq(InspectionRecord::getMediaId, dto.getMediaId())
                 .eq(InspectionRecord::getInspectionDate, dto.getInspectionDate())
+                .ne(InspectionRecord::getInspectionType, "DEVELOPER")
                 .orderByDesc(InspectionRecord::getCreateTime)
                 .last("LIMIT 1"));
         if (!previous.isEmpty() && previous.get(0).getStatus() != 3) {
@@ -197,9 +198,8 @@ public class ManualEntryController {
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
         if (user != null) {
             record.setEntryUserId(user.getUserId());
-            // 审核者→DAILY，管理者→SPOT_CHECK, 开发者不限制
-            record.setInspectionType("DEVELOPER".equals(user.getRole()) ? null : 
-                ("INSPECTOR".equals(user.getRole()) ? "DAILY" : "SPOT_CHECK"));
+            record.setInspectionType("INSPECTOR".equals(user.getRole()) ? "DAILY" : 
+                ("AREA_MANAGER".equals(user.getRole()) ? "SPOT_CHECK" : "DEVELOPER"));
         }
         recordMapper.insert(record);
 
@@ -280,10 +280,13 @@ public class ManualEntryController {
         if (lineId != null)
             wrapper.inSql(InspectionRecord::getStationId,
                 "SELECT station_id FROM workstation WHERE line_id = " + lineId);
-        // 审核者只能看DAILY数据，管理者看全部
+        // 审核者只能看DAILY，管理者排除DEVELOPER测试数据，开发者看全部
         String role = getCurrentRole();
         if ("INSPECTOR".equals(role)) {
             wrapper.eq(InspectionRecord::getInspectionType, "DAILY");
+        }
+        if ("AREA_MANAGER".equals(role)) {
+            wrapper.ne(InspectionRecord::getInspectionType, "DEVELOPER");
         }
         wrapper.orderByDesc(InspectionRecord::getInspectionDate, InspectionRecord::getCreateTime);
         IPage<InspectionRecord> pageResult = recordMapper.selectPage(new Page<>(page, size), wrapper);
@@ -405,6 +408,7 @@ public class ManualEntryController {
                 .eq(InspectionRecord::getStationId, stationId)
                 .eq(InspectionRecord::getMediaId, mediaId)
                 .eq(InspectionRecord::getInspectionDate, LocalDate.now())
+                .ne(InspectionRecord::getInspectionType, "DEVELOPER")
                 .orderByAsc(InspectionRecord::getCreateTime));
 
         int entryCount = records.size();
@@ -451,6 +455,9 @@ public class ManualEntryController {
                 .eq(InspectionRecord::getInspectionDate, LocalDate.parse(date));
         if ("INSPECTOR".equals(getCurrentRole())) {
             w.eq(InspectionRecord::getInspectionType, "DAILY");
+        }
+        if ("AREA_MANAGER".equals(getCurrentRole())) {
+            w.ne(InspectionRecord::getInspectionType, "DEVELOPER");
         }
         List<InspectionRecord> records = recordMapper.selectList(w.orderByAsc(InspectionRecord::getCreateTime));
 

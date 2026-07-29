@@ -33,16 +33,20 @@ public class DashboardController {
     @GetMapping("/stats")
     public Result<Map<String, Object>> stats() {
         LocalDate today = LocalDate.now();
+        String role = getCurrentRole();
         LambdaQueryWrapper<InspectionRecord> w = new LambdaQueryWrapper<InspectionRecord>()
                 .eq(InspectionRecord::getInspectionDate, today);
-        if ("INSPECTOR".equals(getCurrentRole())) {
+        if ("INSPECTOR".equals(role)) {
             w.eq(InspectionRecord::getInspectionType, "DAILY");
+        }
+        if ("AREA_MANAGER".equals(role)) {
+            w.ne(InspectionRecord::getInspectionType, "DEVELOPER");
         }
         List<InspectionRecord> allToday = recordMapper.selectList(w.orderByAsc(InspectionRecord::getCreateTime));
 
         Map<String, List<InspectionRecord>> groups = new LinkedHashMap<>();
         for (InspectionRecord r : allToday) {
-            if ("SPOT_CHECK".equals(r.getInspectionType())) continue;
+            if (!"DEVELOPER".equals(role) && "SPOT_CHECK".equals(r.getInspectionType())) continue;
             String key = r.getStationId() + "_" + r.getMediaId();
             groups.computeIfAbsent(key, k -> new ArrayList<>()).add(r);
         }
@@ -125,11 +129,17 @@ public class DashboardController {
     public Result<List<Map<String, Object>>> weeklyAbnormal() {
         LocalDate today = LocalDate.now();
         LocalDate weekStart = today.with(DayOfWeek.MONDAY);
-        List<InspectionRecord> weekRecords = recordMapper.selectList(
-            new LambdaQueryWrapper<InspectionRecord>()
+        String role = getCurrentRole();
+        LambdaQueryWrapper<InspectionRecord> qw = new LambdaQueryWrapper<InspectionRecord>()
                 .ge(InspectionRecord::getInspectionDate, weekStart)
-                .le(InspectionRecord::getInspectionDate, today)
-                .orderByAsc(InspectionRecord::getCreateTime));
+                .le(InspectionRecord::getInspectionDate, today);
+        if ("INSPECTOR".equals(role)) {
+            qw.eq(InspectionRecord::getInspectionType, "DAILY");
+        }
+        if ("AREA_MANAGER".equals(role)) {
+            qw.ne(InspectionRecord::getInspectionType, "DEVELOPER");
+        }
+        List<InspectionRecord> weekRecords = recordMapper.selectList(qw.orderByAsc(InspectionRecord::getCreateTime));
 
         Map<String, List<InspectionRecord>> groups = new LinkedHashMap<>();
         for (InspectionRecord r : weekRecords) {
@@ -148,7 +158,8 @@ public class DashboardController {
             item.put("stationId", latest.getStationId());
             item.put("mediaId", latest.getMediaId());
             item.put("status", lastStatus);
-            item.put("inspectionType", "SPOT_CHECK".equals(latest.getInspectionType()) ? "抽检" : "日常");
+            String inspType = latest.getInspectionType();
+            item.put("inspectionType", "SPOT_CHECK".equals(inspType) ? "抽检" : ("DEVELOPER".equals(inspType) ? "开发者测试" : "日常"));
             item.put("date", latest.getInspectionDate() != null ? latest.getInspectionDate().toString() : "");
 
             Workstation ws = workstationMapper.selectById(latest.getStationId());
@@ -183,17 +194,21 @@ public class DashboardController {
     public Result<List<Map<String, Object>>> trend() {
         LocalDate today = LocalDate.now();
         LocalDate sevenDaysAgo = today.minusDays(6);
+        String role = getCurrentRole();
         LambdaQueryWrapper<InspectionRecord> w = new LambdaQueryWrapper<InspectionRecord>()
                 .ge(InspectionRecord::getInspectionDate, sevenDaysAgo)
                 .le(InspectionRecord::getInspectionDate, today);
-        if ("INSPECTOR".equals(getCurrentRole())) {
+        if ("INSPECTOR".equals(role)) {
             w.eq(InspectionRecord::getInspectionType, "DAILY");
+        }
+        if ("AREA_MANAGER".equals(role)) {
+            w.ne(InspectionRecord::getInspectionType, "DEVELOPER");
         }
         List<InspectionRecord> allInRange = recordMapper.selectList(w.orderByAsc(InspectionRecord::getCreateTime));
 
         Map<LocalDate, Map<String, List<InspectionRecord>>> dateGroups = new LinkedHashMap<>();
         for (InspectionRecord r : allInRange) {
-            if ("SPOT_CHECK".equals(r.getInspectionType())) continue;
+            if (!"DEVELOPER".equals(role) && "SPOT_CHECK".equals(r.getInspectionType())) continue;
             dateGroups.computeIfAbsent(r.getInspectionDate(), k -> new LinkedHashMap<>())
                 .computeIfAbsent(r.getStationId() + "_" + r.getMediaId(), k -> new ArrayList<>()).add(r);
         }

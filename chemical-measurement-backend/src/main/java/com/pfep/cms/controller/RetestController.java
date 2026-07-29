@@ -46,12 +46,13 @@ public class RetestController {
         InspectionRecord original = recordMapper.selectById(originalRecordId);
         if (original == null) return Result.error("原记录不存在");
 
-        // 检查是否已正常完结（与 entry() 一致）
+        // 检查是否已正常完结（与 entry() 一致）——排除DEVELOPER测试条目
         List<InspectionRecord> previous = recordMapper.selectList(
             new LambdaQueryWrapper<InspectionRecord>()
                 .eq(InspectionRecord::getStationId, original.getStationId())
                 .eq(InspectionRecord::getMediaId, original.getMediaId())
                 .eq(InspectionRecord::getInspectionDate, LocalDate.now())
+                .ne(InspectionRecord::getInspectionType, "DEVELOPER")
                 .orderByDesc(InspectionRecord::getCreateTime)
                 .last("LIMIT 1"));
         if (!previous.isEmpty() && previous.get(0).getStatus() != null && previous.get(0).getStatus() != 3) {
@@ -66,6 +67,7 @@ public class RetestController {
         retest.setStatus(1);
         retest.setEntryType("RETEST");
         retest.setEntryUserId(getUserId());
+        retest.setInspectionType(original.getInspectionType() != null ? original.getInspectionType() : "DAILY");
         recordMapper.insert(retest);
 
         int warnCount = 0, overCount = 0;
