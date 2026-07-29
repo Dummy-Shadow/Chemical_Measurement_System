@@ -1,13 +1,9 @@
 @echo off
 title PFEP Coolant Detection System
 
-:: ============ CONFIG (生产环境请设置环境变量覆盖) ============
-::  set DB_PASSWORD=xxx          (覆盖数据库密码)
-::  set DB_HOST=192.168.x.x      (MySQL服务器地址，默认localhost)
-::  set JWT_SECRET=xxx           (覆盖JWT签名密钥)
-::  set JASYPT_ENCRYPTOR_PASSWORD=xxx
-::  set CORS_ORIGINS=http://server-ip:3000  (内网部署时设为本机地址)
-:: === MySQL 路径（按优先级自动发现，也可手动设置 MYSQL_DIR 环境变量）===
+:: ============ CONFIG ============
+:: Override: set DB_PASSWORD=xxx  set DB_HOST=192.168.x.x  set JWT_SECRET=xxx  set CORS_ORIGINS=http://ip:3000
+:: MySQL auto-detect, or set MYSQL_DIR env var manually
 if not defined MYSQL_DIR (
     if exist "C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe" set "MYSQL_DIR=C:\Program Files\MySQL\MySQL Server 8.4"
 )
@@ -143,13 +139,11 @@ echo.
 echo ================================================
 echo   PFEP System starting (Production Mode)...
 echo.
-echo   本机访问:
-echo     Frontend:   http://localhost:%PORT_FRONT%
-echo     Backend:    http://localhost:%PORT_BACK%
-echo     API Docs:   http://localhost:%PORT_BACK%/doc.html
+echo   Local:       http://localhost:%PORT_FRONT%
+echo   Backend:     http://localhost:%PORT_BACK%
+echo   API Docs:    http://localhost:%PORT_BACK%/doc.html
 echo.
-echo   内网其他电脑访问:
-echo     http://<此电脑IP>:%PORT_FRONT%
+echo   Intranet:    http://^<server-IP^>:%PORT_FRONT%
 echo ================================================
 echo.
 echo   Opening browser in 5 seconds...

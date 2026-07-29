@@ -3,7 +3,7 @@ title PFEP Admin Debug Mode
 
 setlocal enabledelayedexpansion
 
-:: ============ 调试模式密码验证 ============
+:: ============ Admin Password ============
 set "ADMIN_PASSWORD=shjd123456"
 
 echo ================================================
@@ -11,19 +11,19 @@ echo   PFEP Coolant Detection System
 echo   Admin Debug Mode (start_up_admin.bat)
 echo ================================================
 echo.
-set /p "INPUT_PASS=请输入调试模式密码: "
+set /p "INPUT_PASS=Enter admin password: "
 
 if not "!INPUT_PASS!"=="%ADMIN_PASSWORD%" (
-    echo [FAIL] 密码错误，启动已取消。
+    echo [FAIL] Wrong password. Aborted.
     pause
     exit /b 1
 )
-echo [OK] 密码验证通过，进入调试模式...
+echo [OK] Password accepted. Starting debug mode...
 echo.
 :: =============================================
 
 :: ============ CONFIG ============
-:: MySQL 路径（按优先级自动发现，也可手动设置 MYSQL_DIR 环境变量）
+:: MySQL auto-detect, or set MYSQL_DIR env var manually
 if not defined MYSQL_DIR (
     if exist "C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe" set "MYSQL_DIR=C:\Program Files\MySQL\MySQL Server 8.4"
 )
@@ -153,9 +153,9 @@ cd /d "%~dp0"
 echo.
 echo ================================================
 echo   [Admin Debug Mode] Starting...
-echo   本机: http://localhost:%PORT_FRONT%
-echo   API Docs: http://localhost:%PORT_BACK%/doc.html
-echo   所有账号可用（含 dev_admin）
+echo   Local:       http://localhost:%PORT_FRONT%
+echo   API Docs:    http://localhost:%PORT_BACK%/doc.html
+echo   All accounts available (incl. dev_admin)
 echo ================================================
 echo.
 echo   Opening browser in 5 seconds...
