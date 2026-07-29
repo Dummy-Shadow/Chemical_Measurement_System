@@ -1,0 +1,714 @@
+\documentclass[12pt,a4paper]{ctexart}
+\usepackage{geometry}
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tikz}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=cyan
+}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!5},
+    numbers=left,
+    numberstyle=\tiny
+}
+
+\title{PFEP 车间冷却介质检测数据管理系统\\开发者文档}
+\author{郑杭宇}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{项目概述}
+
+\subsection{技术栈}
+
+\begin{tabular}{|l|l|}
+\hline
+\textbf{层级} & \textbf{技术} \\
+\hline
+前端 & Vue 3 + Element Plus + Pinia + Axios + Vite + ECharts + XLSX \\
+后端 & Spring Boot 2.7 + MyBatis-Plus 3.5 + Spring Security + JWT + Knife4j \\
+数据库 & MySQL 8.0 \\
+\hline
+\end{tabular}
+
+\subsection{项目结构}
+
+\begin{lstlisting}[language=bash]
+Chemical_Measurement_System/
+├── start.bat                  # 生产模式启动
+├── start_up_admin.bat         # 调试模式启动（需密码）
+├── backend.bat                # 后端启动子脚本
+├── README.md                  # 甲方交付文档
+├── admin_document/            # 开发者文档（本文件）
+├── chemical-measurement-backend/
+│   ├── pom.xml
+│   ├── sql/init.sql           # DDL + 种子数据
+│   └── src/main/java/com/pfep/cms/
+│       ├── config/           # SecurityConfig, JwtAuthFilter, MyBatisPlusConfig
+│       ├── controller/       # 12个控制器
+│       ├── service/          # Auth, Inspection, Ocr, Warning
+│       ├── service/impl/
+│       ├── mapper/           # 16个Mapper接口
+│       ├── entity/           # 16个实体类
+│       ├── dto/              # LoginDTO, ManualEntryDTO, RegisterDTO
+│       ├── vo/               # LoginVO
+│       ├── common/           # Result<T>, PageResult<T>, GlobalExceptionHandler
+│       └── util/             # JwtUtil
+└── chemical-measurement-frontend/
+    ├── .env                  # 调试模式环境变量
+    ├── .env.production       # 生产模式环境变量
+    ├── vite.config.js        # Vite配置（含API代理）
+    └── src/
+        ├── api/index.js      # 统一API封装
+        ├── router/index.js   # 路由 + 角色权限守卫
+        ├── store/user.js     # Pinia用户状态
+        ├── utils/request.js  # Axios实例 + 拦截器
+        └── views/
+            ├── dashboard/    # Dashboard.vue
+            ├── login/        # Login.vue, Profile.vue
+            ├── upload/       # Upload.vue, ManualEntry.vue, RetestEntry.vue
+            ├── inspection/   # HistoryView.vue, InspectionList.vue, Knowledge.vue
+            └── admin/        # SystemManagement.vue, ScheduleManagement.vue, MySchedule.vue
+\end{lstlisting}
+
+\newpage
+\section{系统配置指南}
+
+\subsection{内网地址配置}
+
+\textbf{文件：} \texttt{chemical-measurement-frontend/.env.production}
+
+\begin{lstlisting}
+# 生产模式（start.bat）
+# 甲方部署时替换为实际内网地址
+VITE_API_TARGET=http://192.168.1.100:8090
+\end{lstlisting}
+
+将 \texttt{192.168.1.100} 替换为部署服务器的实际内网IP。该值被 \texttt{vite.config.js} 读取作为 Vite 开发服务器的 API 代理目标：
+
+\textbf{文件：} \texttt{chemical-measurement-frontend/vite.config.js}（第 25 行）
+
+\begin{lstlisting}[language=javascript]
+proxy: {
+  '/api': {
+    target: process.env.VITE_API_TARGET || 'http://localhost:8090',
+    changeOrigin: true
+  }
+}
+\end{lstlisting}
+
+\subsection{数据库密码}
+
+\textbf{文件：} \texttt{chemical-measurement-backend/src/main/resources/application-dev.yml}（第 8 行）
+
+\begin{lstlisting}[language=yaml]
+password: ${DB_PASSWORD:admin123}
+\end{lstlisting}
+
+通过环境变量 \texttt{DB\_PASSWORD} 覆盖，或在 \texttt{start.bat} 第 10 行设置。
+
+\subsection{JWT密钥}
+
+\textbf{文件：} \texttt{application.yml}（第 31-32 行）
+
+\begin{lstlisting}[language=yaml]
+jwt:
+  secret: ${JWT_SECRET:please-set-JWT_SECRET-env-var-in-production-32bytes}
+  expiration: 86400000
+\end{lstlisting}
+
+生产环境请设置 \texttt{JWT\_SECRET} 环境变量为至少32字节的随机字符串。
+
+\subsection{部署模式控制}
+
+\textbf{文件：} \texttt{application.yml}（第 7 行）
+
+\begin{lstlisting}[language=yaml]
+app:
+  mode: ${APP_MODE:prod}
+\end{lstlisting}
+
+\begin{itemize}
+    \item \texttt{prod}（默认）：生产模式，禁止 \texttt{dev\_admin} 登录
+    \item \texttt{dev}：调试模式，允许所有账号登录
+\end{itemize}
+
+由启动脚本设置：
+\begin{itemize}
+    \item \texttt{start.bat} $\rightarrow$ \texttt{set APP\_MODE=prod}
+    \item \texttt{start\_up\_admin.bat} $\rightarrow$ \texttt{set APP\_MODE=dev}
+\end{itemize}
+
+生效位置：\texttt{AuthServiceImpl.java} 第 36 行
+
+\begin{lstlisting}[language=java]
+if (!"dev".equals(appMode) && "DEVELOPER".equals(user.getRole())) {
+    return Result.error("生产环境下禁止使用开发者账号登录");
+}
+\end{lstlisting}
+
+\subsection{调试模式密码}
+
+\textbf{文件：} \texttt{start\_up\_admin.bat}（第 6 行）
+
+\begin{lstlisting}[language=batch]
+set "ADMIN_PASSWORD=shjd123456"
+\end{lstlisting}
+
+修改此处即可变更调试模式进入密码。
+
+\newpage
+\section{核心业务逻辑位置}
+
+\subsection{录入与复测流程}
+
+\subsubsection{手动录入}
+
+\textbf{后端入口：} \texttt{ManualEntryController.java} $\rightarrow$ \texttt{POST /api/manual/entry}（第 168 行）
+
+流程：
+\begin{enumerate}
+    \item 校验工位-介质配置是否存在（第 169-173 行）
+    \item 锁定检查：排除 DEVELOPER 类型后，查今日最后一条记录，若 status $\neq$ 3 则拒绝（第 175-185 行）
+    \item 根据角色自动设置 \texttt{inspectionType}（第 200-202 行）：
+    \begin{itemize}
+        \item INSPECTOR $\rightarrow$ \texttt{"DAILY"}
+        \item AREA\_MANAGER $\rightarrow$ \texttt{"SPOT\_CHECK"}
+        \item DEVELOPER $\rightarrow$ \texttt{"DEVELOPER"}
+    \end{itemize}
+    \item 写入 \texttt{inspection\_record}（第 204 行）
+    \item 遍历指标值，判断预警/超差状态（第 210-243 行）
+    \item 更新最终 status（第 246-250 行）
+\end{enumerate}
+
+\subsubsection{复测}
+
+\textbf{后端入口：} \texttt{RetestController.java} $\rightarrow$ \texttt{POST /api/retest}（第 41 行）
+
+流程：
+\begin{enumerate}
+    \item 查原记录（第 46 行）
+    \item 锁定检查：排除 DEVELOPER 类型，查今日最后一条（第 49-59 行）
+    \item 新建复测记录，继承原记录的 \texttt{inspectionType}（第 62-69 行）
+    \item 遍历指标值判断预警/超差（第 71-103 行）
+    \item 写入 \texttt{retest\_record} 关联表（第 111-117 行）
+\end{enumerate}
+
+\subsubsection{锁定逻辑详解}
+
+\textbf{锁定查询位置：}
+\begin{itemize}
+    \item \texttt{ManualEntryController.java} 第 176-182 行（\texttt{entry()} 方法）
+    \item \texttt{ManualEntryController.java} 第 403-408 行（\texttt{entryHistory()} 方法）
+    \item \texttt{RetestController.java} 第 50-57 行（\texttt{submitRetest()} 方法）
+\end{itemize}
+
+规则：
+\begin{verbatim}
+对于某 stationId + mediaId + date:
+  排除 inspectionType = "DEVELOPER" 的记录
+  取最后一条（按 createTime DESC）
+  若 last.status != 3（即状态为正常或预警）
+    → locked = true（拒绝录入/复测）
+  若 last.status == 3（超差）
+    → locked = false（允许复测）
+\end{verbatim}
+
+\textbf{前端锁定：} \texttt{ManualEntry.vue} 第 207-210 行，调用 \texttt{/manual/entry-history} 获取 \texttt{locked} 布尔值，禁用对应介质按钮。
+
+\subsection{仪表盘统计逻辑}
+
+\textbf{文件：} \texttt{DashboardController.java}
+
+\subsubsection{stats() 方法（第 32-121 行）—— 当日统计}
+
+数据过滤（按角色）：
+\begin{verbatim}
+INSPECTOR    → inspectionType = "DAILY"
+AREA_MANAGER → inspectionType != "DEVELOPER"
+DEVELOPER    → 不过滤
+\end{verbatim}
+
+分组与计数（每组 = stationId\_mediaId）：
+\begin{itemize}
+    \item \textbf{detectionCount}：组内记录总数（第 54 行）
+    \item \textbf{completedCount}：有记录的独立组合数（第 55 行）
+    \item \textbf{pendingRetestCount}：最后一条 status = 3 的组合数（第 59-61 行）
+    \item \textbf{abnormalCount}：最后一条 status $\in \{2, 3\}$（第 66-67 行）
+    \item \textbf{normalCount}：仅一条且 status = 1，或多条且首条非异常+最后=1（第 68、70 行）
+    \item \textbf{retestOkCount}：首条异常且最后=1且记录数≥2（第 69 行）
+    \item \textbf{warnCount / overCount}：最后一条分别为 status=2 / status=3（第 66-67 行）
+\end{itemize}
+
+多次复测计算规则：
+\begin{verbatim}
+场景 [3]           → detection=1 completed=1 pending=1 abnormal=1
+场景 [3,1]         → detection=2 completed=1 pending=0 retestOk=1
+场景 [3,2,1]       → detection=3 completed=1 pending=0 retestOk=1
+场景 [3,1,3]       → detection=3 completed=1 pending=1 abnormal=1
+（中间正常过，但最新是超差，仍需复测）
+\end{verbatim}
+
+\subsubsection{抽检完成度（第 73-105 行）}
+
+遍历所有产线→工位→介质组合，检查是否均被本周 SPOT\_CHECK 记录覆盖。
+全部完成则 \texttt{spotCheckAllDone = true}。
+
+\subsubsection{trend() 方法（第 181-241 行）—— 7天趋势}
+
+采用与 \texttt{stats()} 相同的角色过滤 + SPOT\_CHECK跳过规则，
+按日期分组后每组的计数逻辑与 stats 一致。
+
+\subsubsection{weeklyAbnormal() 方法（第 123-179 行）—— 本周异常清单}
+
+角色过滤查询后，按 stationId\_mediaId 分组，取最后一条，
+status $\in \{2, 3\}$ 则列入清单。标签三判：
+\begin{verbatim}
+SPOT_CHECK → "抽检"
+DEVELOPER  → "开发者测试"
+默认       → "日常"
+\end{verbatim}
+
+\subsection{角色权限体系}
+
+\subsubsection{后端入口}
+
+\textbf{文件：} \texttt{SecurityConfig.java}
+
+\begin{itemize}
+    \item \texttt{/api/admin/**} 要求 \texttt{DEVELOPER} 或 \texttt{AREA\_MANAGER}（第 42 行）
+    \item 其余路径要求已认证即可
+\end{itemize}
+
+\textbf{JwtAuthenticationFilter.java}：从 Token 中提取 userId、username、role、managedLines，写入 SecurityContext。
+
+\subsubsection{各控制器权限检查}
+
+\begin{longtable}{|l|l|l|}
+\hline
+\textbf{控制器} & \textbf{检查方式} & \textbf{限制} \\
+\hline
+\endfirsthead
+\hline
+\endhead
+\hline
+ManualEntryController & \texttt{getCurrentRole()} & INSPECTOR 仅见 DAILY；MANAGER 排除 DEVELOPER \\
+DashboardController & \texttt{getCurrentRole()} & INSPECTOR 仅见 DAILY；MANAGER 排除 DEVELOPER \\
+ExportController & \texttt{getCurrentRole()} & INSPECTOR 被拒绝 \\
+KnowledgeBaseController & \texttt{getCurrentRole()} & INSPECTOR 不可增删改知识条目 \\
+AdminController & \texttt{isDev() / isManagerOrDev()} & 分级权限 \\
+RetestController & 无 & 任何已认证用户 \\
+AuthController & \texttt{app.mode} 判断 & 生产模式禁开发者登录 \\
+ScheduleController & 无显式检查 & 任何已认证用户 \\
+\hline
+\end{longtable}
+
+\subsubsection{前端路由守卫}
+
+\textbf{文件：} \texttt{router/index.js} 第 39-54 行
+
+\begin{verbatim}
+/uploads       → [DEV, MGR]
+/schedule      → [DEV, MGR]
+/my-schedule   → [INS]
+/admin         → [DEV, MGR]
+其他           → 所有已认证用户
+\end{verbatim}
+
+\subsubsection{侧边栏菜单可见性}
+
+\textbf{文件：} \texttt{MainLayout.vue} 第 6-50 行
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{菜单} & \textbf{DEVELOPER} & \textbf{AREA\_MANAGER} & \textbf{INSPECTOR} \\
+\hline
+首页 & ✓ & ✓ & ✓ \\
+拍照上传 & ✓ & ✓ & — \\
+手动录入 & ✓ & ✓ & ✓ \\
+历史记录 & ✓ & ✓ & ✓ \\
+检测数据 & ✓ & ✓ & ✓ \\
+知识库 & ✓ & ✓ & — \\
+排班管理 & ✓ & ✓ & — \\
+我的排班 & — & — & ✓ \\
+系统管理 & ✓ & ✓ & — \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{数据隔离机制}
+
+\textbf{核心字段：} \texttt{inspection\_record.inspection\_type} (VARCHAR(20))
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{角色} & \textbf{录入时标记} & \textbf{查看范围} \\
+\hline
+INSPECTOR & DAILY & 仅 DAILY \\
+AREA\_MANAGER & SPOT\_CHECK & DAILY + SPOT\_CHECK \\
+DEVELOPER & DEVELOPER & 全部（DAILY + SPOT\_CHECK + DEVELOPER） \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{隔离生效点：}
+\begin{itemize}
+    \item \texttt{ManualEntryController.records()} 第 283-287 行
+    \item \texttt{ManualEntryController.historyRecords()} 第 455-461 行
+    \item \texttt{DashboardController.stats()} 第 36-41 行
+    \item \texttt{DashboardController.trend()} 第 189-196 行
+    \item \texttt{DashboardController.weeklyAbnormal()} 第 133-138 行
+\end{itemize}
+
+\textbf{开发者隔离特性：}
+\begin{itemize}
+    \item 开发者录入标记为 DEVELOPER，不污染管理者/审核者的统计数据
+    \item 开发者记录不参与锁定逻辑（所有锁查询均加 \texttt{.ne("DEVELOPER")}）
+    \item 开发者异常出现在异常清单中标注"开发者测试"
+\end{itemize}
+
+\subsection{知识库体系}
+
+\textbf{文件：} \texttt{KnowledgeBaseController.java}
+
+三级流程：审核者提建议 $\rightarrow$ 管理者/开发者审批 $\rightarrow$ 生成知识条目
+
+\begin{itemize}
+    \item \texttt{POST /api/knowledge} — 直接添加知识（DEVELOPER/MANAGER）
+    \item \texttt{PUT /api/knowledge/\{id\}} — 编辑知识条目（DEVELOPER/MANAGER）
+    \item \texttt{DELETE /api/knowledge/\{id\}} — 删除知识条目（DEVELOPER/MANAGER）
+    \item \texttt{POST /api/knowledge/suggestions} — 提交建议（INSPECTOR）
+    \item \texttt{GET /api/knowledge/suggestions/pending} — 待审批建议
+    \item \texttt{PUT /api/knowledge/suggestions/\{id\}/approve} — 采纳建议
+    \item \texttt{PUT /api/knowledge/suggestions/\{id\}/reject} — 拒绝建议
+\end{itemize}
+
+\subsection{数据导出}
+
+\textbf{文件：} \texttt{ExportController.java}
+
+\begin{itemize}
+    \item \texttt{GET /api/export/spot-check} — 导出本周管理者抽检数据（仅 INSPECTOR 被拒绝）
+    \item \texttt{GET /api/export/daily-inspection} — 导出本周审核者日常检测（仅 INSPECTOR 被拒绝）
+\end{itemize}
+
+前端使用 \texttt{xlsx} 库（\texttt{package.json} 第 21 行）将 JSON 转为 Excel 下载。
+导出按钮位于 \texttt{Dashboard.vue} 第 87-96 行，仅 \texttt{isAreaManager || isDeveloper} 可见。
+
+\subsection{排班管理}
+
+\textbf{文件：} \texttt{ScheduleController.java}
+
+\begin{itemize}
+    \item \texttt{GET /api/schedule/check-today} — 检查当前用户今日排班（ManualEntry.vue 第 144 行使用）
+    \item \texttt{POST /api/schedule/create} — 创建排班
+    \item \texttt{POST /api/schedule/batch} — 批量排班
+    \item \texttt{GET /api/schedule/inspectors} — 获取审核者列表（仅返回 INSPECTOR 角色）
+\end{itemize}
+
+审核者无排班时，ManualEntry.vue 第 148-153 行会 fallback 到 \texttt{userStore.managedLines} 过滤产线。
+
+\newpage
+\section{数据库表结构}
+
+\subsection{核心表}
+
+\begin{longtable}{|l|l|p{7cm}|}
+\hline
+\textbf{表名} & \textbf{说明} & \textbf{关键字段} \\
+\hline
+\endfirsthead
+\hline
+\endhead
+\hline
+\texttt{user} & 用户表 & user\_id, username, password(BCrypt), real\_name, role, managed\_lines \\
+\texttt{production\_line} & 产线表 & line\_id, line\_code, line\_name \\
+\texttt{workstation} & 工位表 & station\_id, station\_code, station\_name, line\_id \\
+\texttt{media\_category} & 介质类别 & category\_id, category\_name \\
+\texttt{media} & 介质牌号表 & media\_id, media\_code, media\_name, category\_id \\
+\texttt{indicator\_template} & 指标模板 & template\_id, category\_id, indicator\_name, indicator\_unit, sort\_order \\
+\texttt{workstation\_media} & 工位介质关联 & wm\_id, station\_id, media\_id \\
+\texttt{workstation\_media\_indicator} & 工位介质指标范围 & wmi\_id, wm\_id, indicator\_id, standard\_min/max, warn\_min/max \\
+\texttt{inspection\_record} & 检测主记录 & \textbf{关键表}，record\_id, station\_id, media\_id, inspection\_date, status(1/2/3), entry\_type, entry\_user\_id, \textbf{inspection\_type}(DAILY/SPOT\_CHECK/DEVELOPER) \\
+\texttt{inspection\_indicator\_value} & 检测指标明细 & detail\_id, record\_id, indicator\_id, final\_value, warn\_status(0/1/2) \\
+\texttt{retest\_record} & 复测关联 & retest\_id, record\_id(原记录), retest\_date, retest\_values(JSON) \\
+\texttt{knowledge\_base} & 知识库 & kb\_id, title, category, symptom, cause, solution, priority \\
+\texttt{knowledge\_suggestion} & 知识建议 & suggestion\_id, suggested\_by, status, reviewed\_by \\
+\texttt{schedule} & 排班表 & schedule\_id, inspector\_id, line\_id, schedule\_date, status \\
+\texttt{schedule\_change\_request} & 排班变更请求 & request\_id, request\_type, proposed\_inspector, status \\
+\texttt{operation\_log} & 操作日志 & log\_id, user\_id, username, action, target\_type, target\_id, detail(JSON) \\
+\hline
+\end{longtable}
+
+\subsection{inspection\_record 字段详解（最重要）}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{字段} & \textbf{类型} & \textbf{说明} \\
+\hline
+record\_id & BIGINT (PK, AUTO) & 记录主键 \\
+station\_id & BIGINT & 工位ID $\rightarrow$ workstation \\
+media\_id & BIGINT & 介质ID $\rightarrow$ media \\
+inspection\_date & DATE & 检测日期 \\
+status & INT & 1=正常 2=预警 3=超差 \\
+entry\_type & VARCHAR & MANUAL / RETEST \\
+entry\_user\_id & BIGINT & 录入者 user\_id \\
+\textbf{inspection\_type} & VARCHAR(20) & \textbf{DAILY / SPOT\_CHECK / DEVELOPER} \\
+create\_time & DATETIME & 自动填充 \\
+update\_time & DATETIME & 自动填充 \\
+\hline
+\end{tabular}
+\end{table}
+
+\newpage
+\section{常见问题与排查}
+
+\subsection{审核者无法录入数据}
+
+\textbf{症状：} 审核者登录后手动录入页无产线可选，或被锁定。
+
+\textbf{排查步骤：}
+\begin{enumerate}
+    \item 检查今日排班：\texttt{SELECT * FROM schedule WHERE inspector\_id = ? AND schedule\_date = ? AND status = 'ACTIVE'}
+    \item 检查 \texttt{user.managed\_lines} 是否有值（排班为空时的 fallback）
+    \item 检查 entryHistory 锁定状态：\texttt{GET /api/manual/entry-history?stationId=\&mediaId=}，看 \texttt{locked} 是否为 true
+    \item 如果是开发者测试导致锁定，检查是否有 DEVELOPER 类型的记录参与了锁查询（应已被排除）
+\end{enumerate}
+
+\subsection{仪表盘统计数字异常}
+
+\textbf{文件：} \texttt{DashboardController.java} $\rightarrow$ \texttt{stats()} 方法
+
+\begin{itemize}
+    \item 确认当前登录角色，不同角色看到的数据范围不同
+    \item 检查 \texttt{inspection\_type} 是否正确标记（开发者记录应为 DEVELOPER 而非 null）
+    \item SPOT\_CHECK 记录已被排除出日常统计（但不排除开发者的 DEVELOPER 记录）
+\end{itemize}
+
+\subsection{开发者无法登录}
+
+\textbf{症状：} 用 \texttt{dev\_admin} 登录返回"生产环境下禁止使用开发者账号登录"。
+
+\textbf{原因：} 使用了 \texttt{start.bat}（生产模式）启动。
+
+\textbf{解决：} 使用 \texttt{start\_up\_admin.bat} 启动，输入调试密码 \texttt{shjd123456}。
+该脚本设置 \texttt{APP\_MODE=dev}，允许开发者登录。
+
+\subsection{前端请求代理失败}
+
+\textbf{文件：} \texttt{vite.config.js} 第 25 行
+
+检查 Vite 控制台输出的 proxy target。生产模式下应从 \texttt{.env.production} 读取内网IP；
+调试模式下应从 \texttt{.env} 读取 localhost。
+
+手动覆盖：启动前端时设置环境变量
+\begin{lstlisting}[language=batch]
+set VITE_API_TARGET=http://192.168.1.100:8090
+npm run dev
+\end{lstlisting}
+
+\subsection{知识库增删按钮不显示}
+
+检查 \texttt{Knowledge.vue} 第 9、31-34 行的 \texttt{v-if} 条件：
+\begin{itemize}
+    \item 增删按钮：\texttt{userStore.isDeveloper || userStore.isAreaManager}
+    \item 建议管理Tab：已对 DEVELOPER 和 AREA\_MANAGER 均开放
+\end{itemize}
+
+\subsection{导出按钮不显示}
+
+\textbf{文件：} \texttt{Dashboard.vue} 第 87 行
+
+条件：\texttt{v-if="userStore.isAreaManager || userStore.isDeveloper"}
+
+仅 INSPECTOR 不可见。如果 DEVELOPER 仍看不到，检查 userStore.role 是否正确。
+
+\subsection{复测无法提交}
+
+\textbf{文件：} \texttt{RetestController.java} 第 49-59 行
+
+检查锁定逻辑：已排除 DEVELOPER 类型记录。若仍有问题，直接查数据库：
+\begin{lstlisting}[language=sql]
+SELECT * FROM inspection_record
+WHERE station_id = ? AND media_id = ? AND inspection_date = ?
+  AND inspection_type != 'DEVELOPER'
+ORDER BY create_time DESC LIMIT 1;
+\end{lstlisting}
+若返回记录的 status $\neq$ 3，则被正确锁定。
+
+\subsection{抽检完成度不更新}
+
+\textbf{文件：} \texttt{DashboardController.java} 第 73-105 行
+
+仅统计 \texttt{inspection\_type = 'SPOT\_CHECK'} 的记录。确认：
+\begin{enumerate}
+    \item 录入者角色是否为 AREA\_MANAGER（才能产生 SPOT\_CHECK 标记）
+    \item 日期是否在本周（周一至当日）
+    \item 该产线下所有工位介质组合是否都有 SPOT\_CHECK 记录
+\end{enumerate}
+
+\subsection{新增 inspection\_type 值后需要改哪些地方}
+
+如需新增一种检测类型（如 \texttt{"AUDIT"}），需修改以下位置：
+\begin{enumerate}
+    \item \texttt{ManualEntryController.java:200-202} — 录入标记逻辑
+    \item \texttt{RetestController.java:68} — 复测继承逻辑
+    \item \texttt{DashboardController.stats()} — 统计过滤（第 38-45 行）
+    \item \texttt{DashboardController.trend()} — 趋势过滤
+    \item \texttt{DashboardController.weeklyAbnormal()} — 异常清单过滤 + 标签（第 151 行）
+    \item \texttt{ManualEntryController.records()} — 列表过滤（第 283-290 行）
+    \item \texttt{ManualEntryController.historyRecords()} — 历史过滤（第 455-461 行）
+    \item 所有锁定查询中的 \texttt{.ne("DEVELOPER")}（如需一并排除）
+    \item \texttt{ExportController} — 导出过滤（如需要）
+\end{enumerate}
+
+\newpage
+\section{API 接口速查}
+
+\subsection{认证}
+
+\begin{tabular}{|l|l|l|}
+\hline
+POST & /api/auth/login & 登录 \\
+POST & /api/auth/register & 注册 \\
+\hline
+\end{tabular}
+
+\subsection{仪表盘}
+
+\begin{tabular}{|l|l|l|}
+\hline
+GET & /api/dashboard/stats & 当日统计 \\
+GET & /api/dashboard/trend & 7天趋势 \\
+GET & /api/dashboard/weekly-abnormal & 本周异常清单 \\
+\hline
+\end{tabular}
+
+\subsection{手动录入}
+
+\begin{tabular}{|l|l|l|}
+\hline
+GET & /api/manual/workstations & 按产线获取工位 \\
+GET & /api/manual/media-options & 按工位获取介质 \\
+GET & /api/manual/indicators & 获取指标模板和范围 \\
+GET & /api/manual/latest-abnormal & 今日最近异常记录 \\
+POST & /api/manual/entry & 提交手动录入 \\
+GET & /api/manual/records & 检测记录列表（分页） \\
+GET & /api/manual/today-stats & 今日各产线统计 \\
+GET & /api/manual/station-today-stats & 某产线工位介质今日统计 \\
+GET & /api/manual/entry-history & 录入/复测次数及锁定 \\
+GET & /api/manual/history-records & 历史记录查询 \\
+\hline
+\end{tabular}
+
+\subsection{复测}
+
+\begin{tabular}{|l|l|l|}
+\hline
+POST & /api/retest & 提交复测 \\
+GET & /api/retest/detail?recordId= & 记录详情 \\
+GET & /api/retest/chain?recordId= & 复测链 \\
+\hline
+\end{tabular}
+
+\subsection{排班}
+
+\begin{tabular}{|l|l|l|}
+\hline
+GET & /api/schedule/check-today & 校验今日排班 \\
+POST & /api/schedule/create & 创建排班 \\
+POST & /api/schedule/batch & 批量排班 \\
+GET & /api/schedule/inspectors & 审核者列表 \\
+\hline
+\end{tabular}
+
+\subsection{知识库}
+
+\begin{tabular}{|l|l|l|}
+\hline
+GET & /api/knowledge & 知识条目列表 \\
+POST & /api/knowledge & 直接添加知识 \\
+PUT & /api/knowledge/\{id\} & 编辑知识条目 \\
+DELETE & /api/knowledge/\{id\} & 删除知识条目 \\
+POST & /api/knowledge/suggestions & 提交知识建议 \\
+GET & /api/knowledge/suggestions/pending & 待审批建议 \\
+GET & /api/knowledge/suggestions/my & 我的建议 \\
+PUT & /api/knowledge/suggestions/\{id\}/approve & 采纳建议 \\
+PUT & /api/knowledge/suggestions/\{id\}/reject & 拒绝建议 \\
+\hline
+\end{tabular}
+
+\subsection{导出}
+
+\begin{tabular}{|l|l|l|}
+\hline
+GET & /api/export/spot-check & 导出抽检数据 \\
+GET & /api/export/daily-inspection & 导出日常检测数据 \\
+\hline
+\end{tabular}
+
+\subsection{系统管理}
+
+\begin{tabular}{|l|l|l|}
+\hline
+GET/POST/PUT/DELETE & /api/admin/production-lines & 产线CRUD \\
+GET/POST/PUT/DELETE & /api/admin/workstations & 工位CRUD \\
+GET/POST/PUT/DELETE & /api/admin/media & 介质CRUD \\
+POST/DELETE & /api/admin/workstation-media & 工位介质关联 \\
+POST/PUT/DELETE & /api/admin/users & 用户管理 \\
+GET & /api/admin/logs & 操作日志 \\
+\hline
+\end{tabular}
+
+\newpage
+\section{环境变量速查}
+
+\begin{longtable}{|l|l|l|p{4cm}|}
+\hline
+\textbf{变量名} & \textbf{默认值} & \textbf{用途} & \textbf{设置位置} \\
+\hline
+\endfirsthead
+\hline
+\endhead
+\hline
+APP\_MODE & prod & 部署模式（dev=允许开发者登录） & start.bat / start\_up\_admin.bat \\
+DB\_PASSWORD & admin123 & 数据库密码 & 环境变量或 application-dev.yml \\
+JWT\_SECRET & (fallback) & JWT签名密钥（生产必设） & 环境变量 \\
+JASYPT\_ENCRYPTOR\_PASSWORD & pfep-cms-master-key-2026 & Jasypt加密密钥 & start.bat \\
+VITE\_API\_TARGET & localhost:8090 & 前端API代理目标 & .env / .env.production \\
+\hline
+\end{longtable}
+
+\section{开发注意事项}
+
+\begin{enumerate}
+    \item \textbf{不要硬编码IP地址} — 所有网络配置通过环境变量或 .env 文件控制
+    \item \textbf{修改 inspection\_type 级联影响} — 新增类型需同步修改 6 处过滤逻辑（见第 5.9 节）
+    \item \textbf{复测记录继承 inspectionType} — \texttt{RetestController.java:68}，确保复测链中类型一致
+    \item \textbf{锁定查询必须排除 DEVELOPER} — 三处锁定查询（entry / entryHistory / submitRetest）均已加 \texttt{.ne("DEVELOPER")}
+    \item \textbf{前端路由守卫不阻止直连API} — 关键后端端点需独立校验角色
+    \item \textbf{生产环境构建用 npm run build} — 会触发 rollup-plugin-obfuscator JS 混淆
+    \item \textbf{git push 失败时} — 检查代理/VPN，GitHub 地址为 \texttt{https://github.com/Dummy-Shadow/Chemical\_Measurement\_System}
+\end{enumerate}
+
+\end{document}
